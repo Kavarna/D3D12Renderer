@@ -61,6 +61,7 @@ using Microsoft::WRL::ComPtr;
 #include "Events.h"
 #include "KeyCodes.h"
 #include "Result.h"
+#include "Exceptions.h"
 
 #define _KiB(x) (x * 1024)
 #define _MiB(x) (x * 1024 * 1024)

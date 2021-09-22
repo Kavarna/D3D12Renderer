@@ -1,4 +1,5 @@
-#include "Core/Application.h"
+#include "Oblivion.h"
+#include "Application.h"
 
 int main(int argc, char *argv[])
 {
@@ -8,7 +9,7 @@ int main(int argc, char *argv[])
     
     
     Application app;
-    CHECK(app.Init(GetModuleHandle(NULL))) << "Unable to initialize Application";
+    app.Init(GetModuleHandle(NULL));
     app.Run();
     return 0;
 }

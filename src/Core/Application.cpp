@@ -1,4 +1,6 @@
+#include "Oblivion.h"
 #include "Application.h"
+#include "Direct3D.h"
 
 
 constexpr auto APPLICATION_NAME = TEXT("Game");
@@ -6,19 +8,15 @@ constexpr auto ENGINE_NAME = TEXT("Oblivion");
 constexpr const char *CONFIG_FILE = "Oblivion.ini";
 
 
-bool Application::Init(HINSTANCE hInstance)
+void Application::Init(HINSTANCE hInstance)
 {
     mInstance = hInstance;
-
     InitWindow();
-
-
-    return true;
 }
 
 void Application::Run()
 {
-    OnCreate();
+    OnInit();
 
     ShowWindow(mWindow, SW_SHOWNORMAL);
     CHECK(UpdateWindow(mWindow)) << "Unable to update window";
@@ -77,14 +75,22 @@ void Application::InitWindow()
     LOG(INFO) << "Created window with size (" << mClientWidth << "x" << mClientHeight << ")";
 }
 
-void Application::OnCreate()
+void Application::OnInit()
 {
+    LOG(INFO) << "Started initializing application";
+    
+    Direct3D::Init();
 
+    LOG(INFO) << "Finished initializing application";
 }
 
 void Application::OnDestroy()
 {
+    LOG(INFO) << "Started destroying application";
 
+    Direct3D::Destroy();
+
+    LOG(INFO) << "Finished destroying application";
 }
 
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -94,7 +100,6 @@ LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
-        default:
-            return DefWindowProc(hwnd, message, wParam, lParam);
     }
+    return DefWindowProc(hwnd, message, wParam, lParam);
 }
