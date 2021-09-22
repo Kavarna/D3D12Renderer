@@ -1,5 +1,6 @@
 #include "Logger.h"
 
+fmt::ostream Logger::gOutputStream = fmt::output_file("OblivionLogs.txt");
 
 void Logger::Init()
 {
@@ -8,5 +9,6 @@ void Logger::Init()
 
 void Logger::Close()
 {
+    gOutputStream.close();
     // Maybe do something here?
 }

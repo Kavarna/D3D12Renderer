@@ -30,8 +30,8 @@ void Direct3D::InternalInit()
 
 void Direct3D::InternalDestroy()
 {
-    mFactory->Release();
-    mAdapter->Release();
+    // mFactory->Release();
+    // mAdapter->Release();
 }
 
 void Direct3D::InitFactory()

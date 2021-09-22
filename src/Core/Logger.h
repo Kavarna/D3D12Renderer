@@ -24,6 +24,8 @@ static const char *LogLevelString[] =
     " FATAL "
 };
 
+extern fmt::ostream gOutputStream;
+
 void Init();
 
 template <typename... Args>
@@ -42,9 +44,11 @@ void Log(LogLevel level, const char *fileName, unsigned int lineNumber, const ch
     {
         style = fg(fmt::color::white);
     }
-    fmt::print(style, "[{}] {}:{} ({}) => ", LogLevelString[(uint32_t)level], fileName, lineNumber, functionName);
-    fmt::print(style, format, std::forward<const Args &>(args)...);
-    fmt::print("\n");
+    std::string newFormat = fmt::format("[{}] {}:{} ({}) => {}\n", LogLevelString[(uint32_t)level], fileName, lineNumber, functionName, format);
+    std::string stringToPrint = fmt::format(newFormat, std::forward<const Args &>(args)...);
+    
+    fmt::print(style, stringToPrint);
+    gOutputStream.print(stringToPrint);
 }
 
 void Close();
