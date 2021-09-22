@@ -51,11 +51,8 @@ using Microsoft::WRL::ComPtr;
 #include <random>
 
 
-// Other libraries
-#include <glog/logging.h>
-
-
 // My stuff
+#include "Logger.h"
 #include "CommonMath.h"
 #include "d3dx12.h"
 #include "Events.h"

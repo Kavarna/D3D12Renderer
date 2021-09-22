@@ -1,4 +1,3 @@
-#include "Oblivion.h"
 #include "Direct3D.h"
 
 Direct3D *gInstance = nullptr;
@@ -12,7 +11,7 @@ void Direct3D::Init()
 
 Direct3D* Direct3D::GetInstance()
 {
-    LOG_IF(ERROR, gInstance) << "Using Direct3D::GetInstance() on an uninitialized singletone";
+    CHECKSHOW(gInstance, "Using Direct3D::GetInstance() on an uninitialized singletone");
     return gInstance;
 }
 
@@ -63,7 +62,7 @@ void Direct3D::InitAdapter()
         }
     }
 
-    CHECK(currentAdapter != nullptr) << "Unable to find a suitable adapter";
+    CHECKSHOW(currentAdapter, "Unable to find a suitable adapter")
     
     mAdapter = currentAdapter;
 }

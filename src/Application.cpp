@@ -1,4 +1,3 @@
-#include "Oblivion.h"
 #include "Application.h"
 #include "Direct3D.h"
 
@@ -19,7 +18,7 @@ void Application::Run()
     OnInit();
 
     ShowWindow(mWindow, SW_SHOWNORMAL);
-    CHECK(UpdateWindow(mWindow)) << "Unable to update window";
+    UpdateWindow(mWindow);
 
     MSG message;
     while (true)
@@ -43,7 +42,7 @@ void Application::Run()
     OnDestroy();
 }
 
-void Application::InitWindow()
+bool Application::InitWindow()
 {
     WNDCLASSEX wndClass = {};
     wndClass.cbSize = sizeof(wndClass);
@@ -53,7 +52,7 @@ void Application::InitWindow()
     wndClass.lpfnWndProc = Application::WndProc;
     wndClass.lpszClassName = ENGINE_NAME;
     wndClass.style = CS_HREDRAW | CS_VREDRAW;
-    CHECK(RegisterClassEx(&wndClass)) << "Unable to register class" << ENGINE_NAME;
+    CHECK(RegisterClassEx(&wndClass), false, "Unbale to register class {}", ENGINE_NAME);
 
     int screenSizeX = GetSystemMetrics(SM_CXSCREEN);
     int screenSizeY = GetSystemMetrics(SM_CYSCREEN);
@@ -70,27 +69,28 @@ void Application::InitWindow()
     mWindow = CreateWindow(ENGINE_NAME, APPLICATION_NAME,
                            WS_OVERLAPPEDWINDOW, windowX, windowY,
                            windowWidth, windowHeight, nullptr, nullptr, mInstance, nullptr);
-    CHECK(mWindow != nullptr) << "Unable to create window";
+    CHECK(mWindow, false, "Unable to create window");
 
-    LOG(INFO) << "Created window with size (" << mClientWidth << "x" << mClientHeight << ")";
+    SHOWINFO("Created window with size {}x{}", mClientWidth, mClientHeight);
+    return true;
 }
 
 void Application::OnInit()
 {
-    LOG(INFO) << "Started initializing application";
+    SHOWINFO("Started initializing application");
     
     Direct3D::Init();
 
-    LOG(INFO) << "Finished initializing application";
+    SHOWINFO("Finished initializing application");
 }
 
 void Application::OnDestroy()
 {
-    LOG(INFO) << "Started destroying application";
+    SHOWINFO("Started destroying application");
 
     Direct3D::Destroy();
 
-    LOG(INFO) << "Finished destroying application";
+    SHOWINFO("Finished destroying application");
 }
 
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)

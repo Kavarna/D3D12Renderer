@@ -14,7 +14,7 @@ public:
     void Run();
 
 private:
-    void InitWindow();
+    bool InitWindow();
 
 private:
     void OnInit();

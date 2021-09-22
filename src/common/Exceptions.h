@@ -13,5 +13,8 @@ inline const TCHAR* GetStringFromHr(HRESULT hr) {
 }
 
 #define ThrowIfFailed(hr) {\
-    LOG_IF(FATAL, FAILED(hr)) << "COM operation failed with code: " << hr << ": " << GetStringFromHr(hr);\
+    if (FAILED(hr))\
+    {\
+        SHOWFATAL("COM operation failed with code {}: {}", hr, GetStringFromHr(hr));\
+    }\
 }
