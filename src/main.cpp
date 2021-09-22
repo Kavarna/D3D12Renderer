@@ -1,5 +1,4 @@
-#include <glog/logging.h>
-#include "Result.h"
+#include "Core/Application.h"
 
 int main(int argc, char *argv[])
 {
@@ -7,7 +6,9 @@ int main(int argc, char *argv[])
     google::SetLogFilenameExtension(".log");
     google::SetLogDestination(0, "./Logs/Oblivion");
     
-    LOG(INFO) << "Hello world!1";
-    LOG(WARNING) << "Hello world!1";
-    LOG(ERROR) << "Hello world!1";
+    
+    Application app;
+    CHECK(app.Init(GetModuleHandle(NULL))) << "Unable to initialize Application";
+    app.Run();
+    return 0;
 }
