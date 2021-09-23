@@ -14,6 +14,7 @@
 
 // Com stuff
 #include <wrl.h>
+#include <comdef.h>
 using Microsoft::WRL::ComPtr;
 
 // DirectX stuff

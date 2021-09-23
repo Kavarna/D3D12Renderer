@@ -10,14 +10,14 @@ public:
     ~Application() = default;
 
 public:
-    void Init(HINSTANCE hInstance);
+    bool Init(HINSTANCE hInstance);
     void Run();
 
 private:
     bool InitWindow();
 
 private:
-    void OnInit();
+    bool OnInit();
     void OnDestroy();
 
 private:

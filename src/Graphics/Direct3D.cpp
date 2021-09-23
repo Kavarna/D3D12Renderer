@@ -1,49 +1,38 @@
 #include "Direct3D.h"
 
-Direct3D *gInstance = nullptr;
 
-void Direct3D::Init()
+bool Direct3D::Init()
 {
-    if (gInstance) return;
-    gInstance = new Direct3D();
-    gInstance->InternalInit();
+    auto factoryResult = CreateFactory();
+    CHECK(factoryResult.Valid(), false, "Cannot create a factory");
+    mFactory = factoryResult.Get();
+    
+    auto adapterResult = CreateAdapter();
+    CHECK(adapterResult.Valid(), false, "Cannot create an adapter");
+    mAdapter = adapterResult.Get();
+
+    auto deviceResult = CreateD3D12Device();
+    CHECK(deviceResult.Valid(), false, "Cannot create a D3D12 device");
+    mDevice = deviceResult.Get();
+
+
+    SHOWINFO("Successfully initialized Direct3D");
+    return true;
 }
 
-Direct3D* Direct3D::GetInstance()
+Result<ComPtr<IDXGIFactory>> Direct3D::CreateFactory()
 {
-    CHECKSHOW(gInstance, "Using Direct3D::GetInstance() on an uninitialized singletone");
-    return gInstance;
-}
-
-void Direct3D::Destroy()
-{
-    if (gInstance == nullptr) return;
-    gInstance->InternalDestroy();
-    gInstance = nullptr;
-}
-
-void Direct3D::InternalInit()
-{
-    InitFactory();
-    InitAdapter();
-}
-
-void Direct3D::InternalDestroy()
-{
-    // mFactory->Release();
-    // mAdapter->Release();
-}
-
-void Direct3D::InitFactory()
-{
-    unsigned int factoryFlags = 53;
+    unsigned int factoryFlags = 0;
 #if DEBUG || _DEBUG
     factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
-    ThrowIfFailed(CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&mFactory)))
+    ComPtr<IDXGIFactory> factory;
+    CHECK_HR(CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&factory)), std::nullopt);
+
+    return factory;
 }
 
-void Direct3D::InitAdapter()
+Result<ComPtr<IDXGIAdapter>> Direct3D::CreateAdapter()
 {
     uint32_t currentAdapterIndex = 0;
     size_t maxVideoMemory = 0;
@@ -62,12 +51,14 @@ void Direct3D::InitAdapter()
         }
     }
 
-    CHECKSHOW(currentAdapter, "Unable to find a suitable adapter")
-    
-    mAdapter = currentAdapter;
+    CHECK(bestAdapter, std::nullopt, "Unable to find a suitable adapter");
+
+    return bestAdapter;
 }
 
-void Direct3D::InitD3D12Device()
+Result<ComPtr<ID3D12Device>> Direct3D::CreateD3D12Device()
 {
-    ThrowIfFailed(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&mDevice)));
+    ComPtr<ID3D12Device> device;
+    CHECK_HR(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device)), std::nullopt);
+    return device;
 }

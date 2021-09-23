@@ -29,9 +29,9 @@ public:
         return !has_value();
     }
 
-    constexpr T &&GetValue() noexcept
+    constexpr T &&Get() noexcept
     {
-        return std::move(this->get_value());
+        return std::move(this->value());
     }
 };
 

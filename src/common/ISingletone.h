@@ -9,7 +9,7 @@ template <typename type> class ISingletone {
 protected:
     ISingletone() { };
     virtual ~ISingletone() {
-        Reset();
+        Destroy();
     };
 
 public:
@@ -29,7 +29,7 @@ public:
         }
     }
 
-    static void Reset() {
+    static void Destroy() {
         if (m_singletoneInstance) {
             auto ptr = m_singletoneInstance; // If we do it this way, we can safely
                                              // call reset() from destructor too

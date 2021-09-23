@@ -7,15 +7,16 @@ constexpr auto ENGINE_NAME = TEXT("Oblivion");
 constexpr const char *CONFIG_FILE = "Oblivion.ini";
 
 
-void Application::Init(HINSTANCE hInstance)
+bool Application::Init(HINSTANCE hInstance)
 {
     mInstance = hInstance;
-    InitWindow();
+    CHECK(InitWindow(), false, "Unable to initialize window");
+    return true;
 }
 
 void Application::Run()
 {
-    OnInit();
+    CHECKRET(OnInit(), "Failed toinitialize application");
 
     ShowWindow(mWindow, SW_SHOWNORMAL);
     UpdateWindow(mWindow);
@@ -75,13 +76,15 @@ bool Application::InitWindow()
     return true;
 }
 
-void Application::OnInit()
+bool Application::OnInit()
 {
+    auto d3d = Direct3D::Get();
     SHOWINFO("Started initializing application");
-    
-    Direct3D::Init();
+
+    CHECK(d3d->Init(), false, "Unable to initialize D3D");
 
     SHOWINFO("Finished initializing application");
+    return true;
 }
 
 void Application::OnDestroy()

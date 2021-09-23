@@ -1,27 +1,22 @@
 #pragma once
 
 #include "Oblivion.h"
+#include "ISingletone.h"
 
-
-class Direct3D
+class Direct3D : public ISingletone<Direct3D>
 {
+    MAKE_SINGLETONE_CAPABLE(Direct3D);
 private:
     Direct3D() = default;
     ~Direct3D() = default;
-
-public:
-    static void Init();
-    static Direct3D* GetInstance();
-    static void Destroy();
     
-private:
-    void InternalInit();
-    void InternalDestroy();
+public:
+    bool Init();
 
 private:
-    void InitFactory();
-    void InitAdapter();
-    void InitD3D12Device();
+    Result<ComPtr<IDXGIFactory>> CreateFactory();
+    Result<ComPtr<IDXGIAdapter>> CreateAdapter();
+    Result<ComPtr<ID3D12Device>> CreateD3D12Device();
 
 private:
     ComPtr<IDXGIFactory> mFactory;

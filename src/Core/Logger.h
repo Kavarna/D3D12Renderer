@@ -31,6 +31,7 @@ void Init();
 template <typename... Args>
 void Log(LogLevel level, const char *fileName, unsigned int lineNumber, const char *functionName, const char *format, const Args&... args)
 {
+#ifdef COLOR_LOGS
     fmt::v8::text_style style;
     if (level == LogLevel::FATAL)
     {
@@ -44,16 +45,21 @@ void Log(LogLevel level, const char *fileName, unsigned int lineNumber, const ch
     {
         style = fg(fmt::color::white);
     }
+#endif
     std::string newFormat = fmt::format("[{}] {}:{} ({}) => {}\n", LogLevelString[(uint32_t)level], fileName, lineNumber, functionName, format);
     std::string stringToPrint = fmt::format(newFormat, std::forward<const Args &>(args)...);
     
+#ifdef COLOR_LOGS
     fmt::print(style, stringToPrint);
+#else
+    fmt::print(stringToPrint);
+#endif
     gOutputStream.print(stringToPrint);
 }
 
 void Close();
 
-};
+} // namespace Logger;
 
 
 constexpr const char *GetShortFileName(const char *str, uint32_t len)
@@ -109,7 +115,7 @@ return (retValue);\
 }\
 }
 
-#define CHECKRET(cond, retValue, format, ...) {\
+#define CHECKRET(cond, format, ...) {\
 if (!cond) {\
 SHOWFATAL(format, __VA_ARGS__);\
 return;\
@@ -122,3 +128,29 @@ SHOWFATAL(format, __VA_ARGS__);\
 }\
 }
 
+inline const TCHAR *GetStringFromHr(HRESULT hr)
+{
+    _com_error err(hr);
+    return err.ErrorMessage();
+}
+
+#define ThrowIfFailed(hr) {\
+    if (FAILED(hr))\
+    {\
+        SHOWFATAL("COM operation failed with code {}: {}", hr, GetStringFromHr(hr));\
+    }\
+}
+
+inline auto ReturnFalseIfFailed(HRESULT hr) -> std::tuple<bool, const TCHAR *>
+{
+    if (FAILED(hr))
+    {
+        return { false, GetStringFromHr(hr) };
+    }
+    return { true, GetStringFromHr(hr) };
+}
+
+#define CHECK_HR(hr, retValue) {\
+    auto [result, message] = ReturnFalseIfFailed(hr); \
+    CHECK(result, retValue, "Expression {} failed with reason: {}", #hr, message); \
+}
