@@ -81,7 +81,19 @@ bool Application::OnInit()
     auto d3d = Direct3D::Get();
     SHOWINFO("Started initializing application");
 
-    CHECK(d3d->Init(), false, "Unable to initialize D3D");
+    CHECK(d3d->Init(mWindow), false, "Unable to initialize D3D");
+
+    auto commandAllocator = d3d->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    CHECK(commandAllocator.Valid(), false, "Unable to create a direct command allocator");
+    mCommandAllocator = commandAllocator.Get();
+
+
+    auto commandList = d3d->CreateCommandList(mCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+    CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
+    mCommandList = commandList.Get();
+
+    
+
 
     SHOWINFO("Finished initializing application");
     return true;

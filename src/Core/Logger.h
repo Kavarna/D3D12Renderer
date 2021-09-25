@@ -128,6 +128,18 @@ SHOWFATAL(format, __VA_ARGS__);\
 }\
 }
 
+#define ASSIGN_RESULT(var, result, retValue, format, ...) {\
+auto __res = result;\
+CHECK(__res.Valid(), retValue, format, __VA_ARGS__);\
+var = __res.Get();\
+}
+
+#define ASSIGN_RESULTRET(var, result, retValue, format, ...) {\
+auto __res = result;\
+CHECKRET(__res.Valid(), format, __VA_ARGS__);\
+var = __res.Get();\
+}
+
 inline const TCHAR *GetStringFromHr(HRESULT hr)
 {
     _com_error err(hr);
@@ -151,6 +163,6 @@ inline auto ReturnFalseIfFailed(HRESULT hr) -> std::tuple<bool, const TCHAR *>
 }
 
 #define CHECK_HR(hr, retValue) {\
-    auto [result, message] = ReturnFalseIfFailed(hr); \
-    CHECK(result, retValue, "Expression {} failed with reason: {}", #hr, message); \
+    auto [__result, __message] = ReturnFalseIfFailed(hr); \
+    CHECK(__result, retValue, "Expression {} failed with reason: {}", #hr, __message); \
 }

@@ -24,6 +24,12 @@ private:
     HINSTANCE mInstance = nullptr;
     HWND mWindow = nullptr;
 
+private:
+    // D3D Objects
+    ComPtr<ID3D12CommandAllocator> mCommandAllocator;
+    ComPtr<ID3D12GraphicsCommandList> mCommandList;
+
+    ComPtr<ID3D12Fence> mFence;
 
 private:
     unsigned int mClientWidth = 800, mClientHeight = 600;
