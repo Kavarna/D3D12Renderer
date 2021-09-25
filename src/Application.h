@@ -19,6 +19,7 @@ private:
 private:
     bool OnInit();
     void OnDestroy();
+    void OnRender();
 
 private:
     HINSTANCE mInstance = nullptr;
@@ -30,6 +31,8 @@ private:
     ComPtr<ID3D12GraphicsCommandList> mCommandList;
 
     ComPtr<ID3D12Fence> mFence;
+
+    uint64_t mCurrentFrame = 0;
 
 private:
     unsigned int mClientWidth = 800, mClientHeight = 600;

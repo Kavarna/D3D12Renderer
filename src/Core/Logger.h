@@ -122,6 +122,20 @@ return;\
 }\
 }
 
+#define CHECKCONT(cond, format, ...) {\
+if (!cond) {\
+SHOWFATAL(format, __VA_ARGS__);\
+continue;\
+}\
+}
+
+#define CHECKBK(cond, format, ...) {\
+if (!cond) {\
+SHOWFATAL(format, __VA_ARGS__);\
+break;\
+}\
+}
+
 #define CHECKSHOW(cond, format, ...) {\
 if (!cond) {\
 SHOWFATAL(format, __VA_ARGS__);\
@@ -165,4 +179,9 @@ inline auto ReturnFalseIfFailed(HRESULT hr) -> std::tuple<bool, const TCHAR *>
 #define CHECK_HR(hr, retValue) {\
     auto [__result, __message] = ReturnFalseIfFailed(hr); \
     CHECK(__result, retValue, "Expression {} failed with reason: {}", #hr, __message); \
+}
+
+#define CHECKRET_HR(hr) {\
+    auto [__result, __message] = ReturnFalseIfFailed(hr); \
+    CHECKRET(__result, "Expression {} failed with reason: {}", #hr, __message); \
 }

@@ -33,6 +33,10 @@ public:
 
     void Transition(ID3D12GraphicsCommandList *cmdList, ID3D12Resource *resource, D3D12_RESOURCE_STATES initialState, D3D12_RESOURCE_STATES finalState);
 
+    void Signal(ID3D12Fence *fence, uint64_t value);
+    void WaitForFenceValue(ID3D12Fence *fence, uint64_t value);
+    void ExecuteCommandList(ID3D12GraphicsCommandList *cmdList);
+
     template <D3D12_DESCRIPTOR_HEAP_TYPE heapType>
     constexpr unsigned int GetDescriptorIncrementSize();
 

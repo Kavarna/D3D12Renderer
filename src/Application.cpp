@@ -36,7 +36,7 @@ void Application::Run()
         }
         else
         {
-
+            OnRender();
         }
     }
 
@@ -91,6 +91,12 @@ bool Application::OnInit()
     auto commandList = d3d->CreateCommandList(mCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
     CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
     mCommandList = commandList.Get();
+    mCommandList->Close();
+
+    auto fence = d3d->CreateFence(0);
+    CHECK(fence.Valid(), false, "Unable to initialize fence with value 0");
+    mFence = fence.Get();
+
 
 
     SHOWINFO("Finished initializing application");
@@ -99,11 +105,35 @@ bool Application::OnInit()
 
 void Application::OnDestroy()
 {
+    auto d3d = Direct3D::Get();
     SHOWINFO("Started destroying application");
 
-    Direct3D::Destroy();
+    d3d->Signal(mFence.Get(), mCurrentFrame);
+    d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
 
+    Direct3D::Destroy();
     SHOWINFO("Finished destroying application");
+}
+
+void Application::OnRender()
+{
+    auto d3d = Direct3D::Get();
+
+    CHECKRET_HR(mCommandAllocator->Reset());
+    CHECKRET_HR(mCommandList->Reset(mCommandAllocator.Get(), nullptr));
+
+    d3d->OnRenderBegin(mCommandList.Get());
+    
+    d3d->OnRenderEnd(mCommandList.Get());
+
+    CHECKRET_HR(mCommandList->Close());
+
+    d3d->ExecuteCommandList(mCommandList.Get());
+    d3d->Signal(mFence.Get(), mCurrentFrame);
+    d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
+
+    d3d->Present();
+
 }
 
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)

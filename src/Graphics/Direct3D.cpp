@@ -1,9 +1,19 @@
 #include "Direct3D.h"
 
 
+void EnableDebugLayer()
+{
+    ComPtr<ID3D12Debug> debugInterface;
+    D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
+    debugInterface->EnableDebugLayer();
+}
+
+
 bool Direct3D::Init(HWND hwnd)
 {
     CHECK(hwnd, false, "Cannot create a D3D12 intance without a valid window");
+
+    EnableDebugLayer();
 
     ASSIGN_RESULT(mFactory, CreateFactory(), false, "Cannot create a valid factory");
     ASSIGN_RESULT(mAdapter, CreateAdapter(), false, "Cannot create an adapter");
@@ -105,6 +115,32 @@ void Direct3D::Transition(ID3D12GraphicsCommandList *cmdList, ID3D12Resource *re
     cmdList->ResourceBarrier(1, &barrier);
 }
 
+void Direct3D::Signal(ID3D12Fence *fence, uint64_t value)
+{
+    CHECKRET_HR(mDirectCommandQueue->Signal(fence, value));
+}
+
+void Direct3D::WaitForFenceValue(ID3D12Fence* fence, uint64_t value)
+{
+    if (fence->GetCompletedValue() >= value)
+    {
+        return;
+    }
+
+    HANDLE evt = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    CHECKRET_HR(fence->SetEventOnCompletion(value, evt));
+    WaitForSingleObject(evt, INFINITE);
+    CloseHandle(evt);
+}
+
+void Direct3D::ExecuteCommandList(ID3D12GraphicsCommandList *cmdList)
+{
+    ID3D12CommandList *cmdLists[] = {
+        cmdList
+    };
+    mDirectCommandQueue->ExecuteCommandLists(ARRAYSIZE(cmdLists), cmdLists);
+}
+
 Result<ComPtr<ID3D12CommandQueue>> Direct3D::CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType)
 {
     ComPtr<ID3D12CommandQueue> queue;
@@ -172,7 +208,8 @@ Result<ComPtr<IDXGIAdapter>> Direct3D::CreateAdapter()
     {
         currentAdapterIndex++;
         DXGI_ADAPTER_DESC adapterDesc;
-        if (FAILED(currentAdapter->GetDesc(&adapterDesc))) continue;
+        CHECKCONT(SUCCEEDED(currentAdapter->GetDesc(&adapterDesc)),
+                  "Unable to get description of adapter located at index {}", currentAdapterIndex);
 
         if (adapterDesc.DedicatedVideoMemory > maxVideoMemory)
         {
