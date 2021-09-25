@@ -92,8 +92,6 @@ bool Application::OnInit()
     CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
     mCommandList = commandList.Get();
 
-    
-
 
     SHOWINFO("Finished initializing application");
     return true;

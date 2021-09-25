@@ -20,18 +20,28 @@ public:
     Result<ComPtr<ID3D12GraphicsCommandList>> CreateCommandList(ID3D12CommandAllocator *allocator,
                                                                 D3D12_COMMAND_LIST_TYPE type, ID3D12PipelineState *pipeline = nullptr);
     Result<ComPtr<ID3D12Fence>> CreateFence(uint64_t initialValue);
+    Result<ComPtr<ID3D12DescriptorHeap>> CreateDescriptorHeap(uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type,
+                                                              D3D12_DESCRIPTOR_HEAP_FLAGS flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 
 public:
     bool AllowTearing();
 
+    void Transition(ID3D12GraphicsCommandList *cmdList, ID3D12Resource *resource, D3D12_RESOURCE_STATES initialState, D3D12_RESOURCE_STATES finalState);
+
+    template <D3D12_DESCRIPTOR_HEAP_TYPE heapType>
+    constexpr unsigned int GetDescriptorIncrementSize();
+
 private:
     Result<ComPtr<ID3D12CommandQueue>> CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType);
-    Result<ComPtr<IDXGISwapChain>> CreateSwapchain(HWND hwnd);
+    Result<ComPtr<IDXGISwapChain4>> CreateSwapchain(HWND hwnd);
 
 private:
     Result<ComPtr<IDXGIFactory>> CreateFactory();
     Result<ComPtr<IDXGIAdapter>> CreateAdapter();
     Result<ComPtr<ID3D12Device>> CreateD3D12Device();
+
+private:
+    bool UpdateDescriptors();
 
 private:
     ComPtr<IDXGIFactory> mFactory;
@@ -40,7 +50,15 @@ private:
 
     ComPtr<ID3D12CommandQueue> mDirectCommandQueue;
 
-    ComPtr<IDXGISwapChain> mSwapchain;
+    ComPtr<IDXGISwapChain4> mSwapchain;
+
+    ComPtr<ID3D12DescriptorHeap> mRTVHeap;
+
+    std::array<ComPtr<ID3D12Resource>, kBufferCount> mSwapchainResources;
 };
 
 
+template constexpr unsigned int Direct3D::GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>();
+template constexpr unsigned int Direct3D::GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>();
+template constexpr unsigned int Direct3D::GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>();
+template constexpr unsigned int Direct3D::GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_DSV>();

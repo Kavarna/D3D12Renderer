@@ -10,6 +10,10 @@ bool Direct3D::Init(HWND hwnd)
     ASSIGN_RESULT(mDevice, CreateD3D12Device(), false, "Cannot create a D3D12 device");
     ASSIGN_RESULT(mDirectCommandQueue, CreateCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT), false, "Cannot initialize direct command queue");
     ASSIGN_RESULT(mSwapchain, CreateSwapchain(hwnd), false, "Cannot create swapchain");
+    ASSIGN_RESULT(mRTVHeap, CreateDescriptorHeap(kBufferCount, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
+                  false, "Unable to create a descriptor heap with {} descriptors", kBufferCount);
+
+    CHECK(UpdateDescriptors(), false, "Unable to update descriptors");
 
     SHOWINFO("Successfully initialized Direct3D");
     return true;
@@ -37,6 +41,21 @@ Result<ComPtr<ID3D12Fence>> Direct3D::CreateFence(uint64_t initialValue)
     return result;
 }
 
+Result<ComPtr<ID3D12DescriptorHeap>> Direct3D::CreateDescriptorHeap(uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type,
+                                                                    D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+{
+    ComPtr<ID3D12DescriptorHeap> result;
+
+    D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+    heapDesc.NodeMask = 0;
+    heapDesc.NumDescriptors = numDescriptors;
+    heapDesc.Type = type;
+    heapDesc.Flags = flags;
+    CHECK_HR(mDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&result)), std::nullopt);
+
+    return result;
+}
+
 bool Direct3D::AllowTearing()
 {
     static std::optional<bool> tearingEnabled;
@@ -51,6 +70,13 @@ bool Direct3D::AllowTearing()
     
     tearingEnabled = (tearingFeature == TRUE);
     return *tearingEnabled;
+}
+
+void Direct3D::Transition(ID3D12GraphicsCommandList *cmdList, ID3D12Resource *resource,
+                          D3D12_RESOURCE_STATES initialState, D3D12_RESOURCE_STATES finalState)
+{
+    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(resource, initialState, finalState);
+    cmdList->ResourceBarrier(1, &barrier);
 }
 
 Result<ComPtr<ID3D12CommandQueue>> Direct3D::CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType)
@@ -69,7 +95,7 @@ Result<ComPtr<ID3D12CommandQueue>> Direct3D::CreateCommandQueue(D3D12_COMMAND_LI
     return queue;
 }
 
-Result<ComPtr<IDXGISwapChain>> Direct3D::CreateSwapchain(HWND hwnd)
+Result<ComPtr<IDXGISwapChain4>> Direct3D::CreateSwapchain(HWND hwnd)
 {
     CHECK(mDirectCommandQueue, std::nullopt, "Cannot create a swapchain without a valid direct command queue");
     ComPtr<IDXGIFactory4> factory4;
@@ -92,7 +118,7 @@ Result<ComPtr<IDXGISwapChain>> Direct3D::CreateSwapchain(HWND hwnd)
 
     ComPtr<IDXGISwapChain1> swapchain1;
     CHECK_HR(factory4->CreateSwapChainForHwnd(mDirectCommandQueue.Get(), hwnd, &swapchainDesc1, nullptr, nullptr, &swapchain1), std::nullopt);
-    ComPtr<IDXGISwapChain> swapchain;
+    ComPtr<IDXGISwapChain4> swapchain;
     CHECK_HR(swapchain1.As(&swapchain), std::nullopt);
 
     return swapchain;
@@ -139,4 +165,36 @@ Result<ComPtr<ID3D12Device>> Direct3D::CreateD3D12Device()
     ComPtr<ID3D12Device> device;
     CHECK_HR(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device)), std::nullopt);
     return device;
+}
+
+template <D3D12_DESCRIPTOR_HEAP_TYPE heapType>
+constexpr unsigned int Direct3D::GetDescriptorIncrementSize()
+{
+    static std::optional<unsigned int> incrementSize = std::nullopt;
+    if (!incrementSize.has_value())
+    {
+        incrementSize = mDevice->GetDescriptorHandleIncrementSize(heapType);
+    }
+    return *incrementSize;
+}
+
+bool Direct3D::UpdateDescriptors()
+{
+    CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mRTVHeap->GetCPUDescriptorHandleForHeapStart());
+    for (uint32_t i = 0; i < kBufferCount; ++i)
+    {
+        CHECK_HR(mSwapchain->GetBuffer(i, IID_PPV_ARGS(&mSwapchainResources[i])), false);
+
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        rtvDesc.Texture2D.MipSlice = 0;
+        rtvDesc.Texture2D.PlaneSlice = 0;
+        rtvDesc.Format = kBackbufferFormat;
+
+        mDevice->CreateRenderTargetView(mSwapchainResources[i].Get(), &rtvDesc, cpuHandle);
+        cpuHandle.Offset(1, GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
+    }
+
+    SHOWINFO("Successfully updated {} descriptors", kBufferCount);
+    return true;
 }

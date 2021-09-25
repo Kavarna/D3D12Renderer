@@ -14,7 +14,7 @@ include_directories("Graphics")
 include_directories("Core")
 
 add_executable(D3D12Renderer ${SOURCES} ${CORE_SRC} ${COMMON} ${GRAPHICS_SRC})
-target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib")
+target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib")
 
 make_filters("${CORE_SRC}")
 make_filters("${COMMON}")
