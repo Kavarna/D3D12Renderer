@@ -16,6 +16,11 @@ public:
     bool Init(HWND hwnd);
 
 public:
+    void OnRenderBegin(ID3D12GraphicsCommandList *cmdList);
+    void OnRenderEnd(ID3D12GraphicsCommandList *cmdList);
+    void Present();
+
+public:
     Result<ComPtr<ID3D12CommandAllocator>> CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE type);
     Result<ComPtr<ID3D12GraphicsCommandList>> CreateCommandList(ID3D12CommandAllocator *allocator,
                                                                 D3D12_COMMAND_LIST_TYPE type, ID3D12PipelineState *pipeline = nullptr);
@@ -55,6 +60,8 @@ private:
     ComPtr<ID3D12DescriptorHeap> mRTVHeap;
 
     std::array<ComPtr<ID3D12Resource>, kBufferCount> mSwapchainResources;
+
+    bool mVsync = true;
 };
 
 

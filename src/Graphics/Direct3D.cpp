@@ -19,6 +19,32 @@ bool Direct3D::Init(HWND hwnd)
     return true;
 }
 
+void Direct3D::OnRenderBegin(ID3D12GraphicsCommandList *cmdList)
+{
+    uint32_t activeBackBuffer = mSwapchain->GetCurrentBackBufferIndex();
+    Transition(cmdList, mSwapchainResources[activeBackBuffer].Get(),
+               D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(mRTVHeap->GetCPUDescriptorHandleForHeapStart());
+    rtvHandle.Offset(activeBackBuffer, GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
+    FLOAT backgroundColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    cmdList->ClearRenderTargetView(rtvHandle, backgroundColor, 0, nullptr);
+}
+
+void Direct3D::OnRenderEnd(ID3D12GraphicsCommandList *cmdList)
+{
+    uint32_t activeBackBuffer = mSwapchain->GetCurrentBackBufferIndex();
+    Transition(cmdList, mSwapchainResources[activeBackBuffer].Get(),
+               D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+}
+
+void Direct3D::Present()
+{
+    UINT presentInterval = mVsync ? 1 : 0;
+    UINT presentFlags = (!mVsync && AllowTearing()) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    mSwapchain->Present(presentInterval, presentFlags);
+}
+
 Result<ComPtr<ID3D12CommandAllocator>> Direct3D::CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<ID3D12CommandAllocator> result;
