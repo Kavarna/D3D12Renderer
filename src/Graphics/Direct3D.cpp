@@ -35,9 +35,28 @@ void Direct3D::OnRenderBegin(ID3D12GraphicsCommandList *cmdList)
     Transition(cmdList, mSwapchainResources[activeBackBuffer].Get(),
                D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+    static float r = 0.5f, g = 0.5f, b = 0.5f;
+    static int32_t dr = 1, dg = 1, db = 1;
+    r += dr * 0.001f;
+    g += dg * 0.003f;
+    b += db * 0.001f;
+
+    if (r <= 0.0f || r >= 1.0f)
+    {
+        dr *= -1;
+    }
+    if (g <= 0.0f || g >= 1.0f)
+    {
+        dg *= -1;
+    }
+    if (b <= 0.0f || b >= 1.0f)
+    {
+        db *= -1;
+    }
+
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(mRTVHeap->GetCPUDescriptorHandleForHeapStart());
     rtvHandle.Offset(activeBackBuffer, GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
-    FLOAT backgroundColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    FLOAT backgroundColor[4] = { r, g, b, 1.0f };
     cmdList->ClearRenderTargetView(rtvHandle, backgroundColor, 0, nullptr);
 }
 
@@ -88,6 +107,31 @@ Result<ComPtr<ID3D12DescriptorHeap>> Direct3D::CreateDescriptorHeap(uint32_t num
     heapDesc.Type = type;
     heapDesc.Flags = flags;
     CHECK_HR(mDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&result)), std::nullopt);
+
+    return result;
+}
+
+Result<ComPtr<ID3D12PipelineState>> Direct3D::CreatePipelineSteate(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc)
+{
+    ComPtr<ID3D12PipelineState> result;
+    CHECK_HR(mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&result)), std::nullopt);
+    return result;
+}
+
+Result<ComPtr<ID3D12RootSignature>> Direct3D::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC& desc)
+{
+    ComPtr<ID3D12RootSignature> result;
+    ComPtr<ID3DBlob> signatureBlob, errorBlob;
+
+    HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob);
+    if (errorBlob)
+    {
+        SHOWWARNING("Message shown while serializing a root signature: {}", (char *)errorBlob->GetBufferPointer());
+    }
+    CHECK(SUCCEEDED(hr), std::nullopt, "Unable to create a root signature from a unaserialized root signature");
+
+    CHECK_HR(mDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
+                                          IID_PPV_ARGS(&result)), std::nullopt);
 
     return result;
 }

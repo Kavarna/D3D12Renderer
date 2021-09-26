@@ -6,6 +6,7 @@
 class Direct3D : public ISingletone<Direct3D>
 {
     MAKE_SINGLETONE_CAPABLE(Direct3D);
+public:
     static constexpr const auto kBufferCount = 3;
     static constexpr const auto kBackbufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 private:
@@ -27,6 +28,8 @@ public:
     Result<ComPtr<ID3D12Fence>> CreateFence(uint64_t initialValue);
     Result<ComPtr<ID3D12DescriptorHeap>> CreateDescriptorHeap(uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type,
                                                               D3D12_DESCRIPTOR_HEAP_FLAGS flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+    Result<ComPtr<ID3D12PipelineState>> CreatePipelineSteate(const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc);
+    Result<ComPtr<ID3D12RootSignature>> CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC &desc);
 
 public:
     bool AllowTearing();

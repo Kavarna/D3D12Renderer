@@ -22,3 +22,5 @@ make_filters("${SOURCES}")
 make_filters("${GRAPHICS_SRC}")
 
 set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 17)
+
+set_property(TARGET D3D12Renderer PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

@@ -1,6 +1,6 @@
 #include "Application.h"
 #include "Direct3D.h"
-
+#include "PipelineManager.h"
 
 constexpr auto APPLICATION_NAME = TEXT("Game");
 constexpr auto ENGINE_NAME = TEXT("Oblivion");
@@ -36,7 +36,7 @@ void Application::Run()
         }
         else
         {
-            OnRender();
+            CHECKBK(OnRender(), "Failed to render frame {}", mCurrentFrame);
         }
     }
 
@@ -82,6 +82,7 @@ bool Application::OnInit()
     SHOWINFO("Started initializing application");
 
     CHECK(d3d->Init(mWindow), false, "Unable to initialize D3D");
+    CHECK(PipelineManager::Get()->Init(), false, "Unable to initialize pipeline manager");
 
     auto commandAllocator = d3d->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT);
     CHECK(commandAllocator.Valid(), false, "Unable to create a direct command allocator");
@@ -96,7 +97,6 @@ bool Application::OnInit()
     auto fence = d3d->CreateFence(0);
     CHECK(fence.Valid(), false, "Unable to initialize fence with value 0");
     mFence = fence.Get();
-
 
 
     SHOWINFO("Finished initializing application");
@@ -115,18 +115,18 @@ void Application::OnDestroy()
     SHOWINFO("Finished destroying application");
 }
 
-void Application::OnRender()
+bool Application::OnRender()
 {
     auto d3d = Direct3D::Get();
 
-    CHECKRET_HR(mCommandAllocator->Reset());
-    CHECKRET_HR(mCommandList->Reset(mCommandAllocator.Get(), nullptr));
+    CHECK_HR(mCommandAllocator->Reset(), false);
+    CHECK_HR(mCommandList->Reset(mCommandAllocator.Get(), nullptr), false);
 
     d3d->OnRenderBegin(mCommandList.Get());
     
     d3d->OnRenderEnd(mCommandList.Get());
 
-    CHECKRET_HR(mCommandList->Close());
+    CHECK_HR(mCommandList->Close(), false);
 
     d3d->ExecuteCommandList(mCommandList.Get());
     d3d->Signal(mFence.Get(), mCurrentFrame);
@@ -134,6 +134,7 @@ void Application::OnRender()
 
     d3d->Present();
 
+    return true;
 }
 
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)

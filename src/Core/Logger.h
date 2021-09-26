@@ -17,7 +17,7 @@ enum class LogLevel
 {
     INFO = 0, WARNING = 1, FATAL = 2
 };
-static const char *LogLevelString[] =
+static constexpr const char *LogLevelString[] =
 {
     " INFO  ",
     "WARNING",
@@ -115,6 +115,12 @@ return (retValue);\
 }\
 }
 
+#define CHECKSIMPLE(cond) {\
+if (!cond) {\
+return false;\
+}\
+}
+
 #define CHECKRET(cond, format, ...) {\
 if (!cond) {\
 SHOWFATAL(format, __VA_ARGS__);\
@@ -158,13 +164,6 @@ inline const TCHAR *GetStringFromHr(HRESULT hr)
 {
     _com_error err(hr);
     return err.ErrorMessage();
-}
-
-#define ThrowIfFailed(hr) {\
-    if (FAILED(hr))\
-    {\
-        SHOWFATAL("COM operation failed with code {}: {}", hr, GetStringFromHr(hr));\
-    }\
 }
 
 inline auto ReturnFalseIfFailed(HRESULT hr) -> std::tuple<bool, const TCHAR *>

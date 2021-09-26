@@ -19,7 +19,7 @@ private:
 private:
     bool OnInit();
     void OnDestroy();
-    void OnRender();
+    bool OnRender();
 
 private:
     HINSTANCE mInstance = nullptr;
