@@ -74,14 +74,9 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.InputLayout.NumElements = (uint32_t)elementDesc.size();
     simpleColorPipeline.InputLayout.pInputElementDescs = elementDesc.data();
 
-    auto vs = CompileShader(L"Shaders\\SimpleColorPipeline\\VertexShader.hlsl", "vs_5_0");
-    CHECK(vs.Valid(), false, "Unable to compile vertex shader for pipeline type {} vertex type {}",
-          PipelineTypeString[int(type)], VertexTypeString[int(vertexType)]);
-    auto vertexShader = vs.Get();
-    auto ps = CompileShader(L"Shaders\\SimpleColorPipeline\\PixelShader.hlsl", "ps_5_0");
-    CHECK(ps.Valid(), false, "Unable to compile pixel sahder for pipeline type {} vertex type {}",
-          PipelineTypeString[int(type)], VertexTypeString[int(vertexType)]);
-    auto pixelShader = ps.Get();
+    ComPtr<ID3DBlob> vertexShader, pixelShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\SimpleColorPipeline_VertexShader.cso", &vertexShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\SimpleColorPipeline_PixelShader.cso", &pixelShader), false);
 
     simpleColorPipeline.VS.BytecodeLength = vertexShader->GetBufferSize();
     simpleColorPipeline.VS.pShaderBytecode = vertexShader->GetBufferPointer();
@@ -92,7 +87,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     CHECK(pipeline.Valid(), false, "Unable to create pipeline type {} for vertex type {}",
           PipelineTypeString[int(type)], VertexTypeString[int(vertexType)]);
     
-    mPipelines[type][vertexType] = pipeline.Get();
+    mPipelines[type] = pipeline.Get();
     mShaders[type].push_back(vertexShader);
     mShaders[type].push_back(pixelShader);
     mPipelineToRootSignature[type] = RootSignatureType::Empty;
@@ -100,26 +95,4 @@ bool PipelineManager::InitSimpleColorPipeline()
     return true;
 }
 
-Result<ComPtr<ID3DBlob>> PipelineManager::CompileShader(LPCWSTR filename, LPCSTR profile)
-{
-    ComPtr<ID3DBlob> result, errorMessages;
-
-    UINT flags = 0;
-#if defined(DEBUG) || defined(_DEBUG)  
-    flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-    auto szFilename = Conversions::ws2s(filename);
-
-    HRESULT hr = D3DCompileFromFile(filename, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main",
-                                    profile, flags, 0, &result, &errorMessages);
-    if (errorMessages)
-    {
-        SHOWWARNING("Message shown when compiling {} with profile {}: {}",
-                    szFilename, profile, (char*)errorMessages->GetBufferPointer());
-    }
-    CHECK(SUCCEEDED(hr), false, "Unable to compile {} with profile {}", szFilename, profile);
-
-    return result;
-}
 

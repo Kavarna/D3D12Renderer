@@ -43,12 +43,10 @@ private:
 private:
     bool InitSimpleColorPipeline();
 
-    Result<ComPtr<ID3DBlob>> CompileShader(LPCWSTR filename, LPCSTR profile);
-
 private:
     bool mCreated = false;
 
-    std::unordered_map<PipelineType, std::unordered_map<VertexType, ComPtr<ID3D12PipelineState>>> mPipelines;
+    std::unordered_map<PipelineType, ComPtr<ID3D12PipelineState>> mPipelines;
     std::unordered_map<PipelineType, RootSignatureType> mPipelineToRootSignature;
     std::unordered_map<PipelineType, std::vector<ComPtr<ID3DBlob>>> mShaders;
 

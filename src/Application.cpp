@@ -108,6 +108,8 @@ void Application::OnDestroy()
     auto d3d = Direct3D::Get();
     SHOWINFO("Started destroying application");
 
+    PipelineManager::Destroy();
+
     d3d->Signal(mFence.Get(), mCurrentFrame);
     d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
 

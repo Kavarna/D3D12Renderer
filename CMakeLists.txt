@@ -7,6 +7,8 @@ add_definitions(-DGLOG_NO_ABBREVIATED_SEVERITIES)
 
 include_directories("src/common")
 
+set(CURRENT_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 

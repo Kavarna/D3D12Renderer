@@ -36,3 +36,5 @@ build/**
 
 # Logs
 OblivionLogs.txt
+
+Shaders/*
