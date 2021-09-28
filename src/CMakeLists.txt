@@ -39,22 +39,19 @@ make_filters("${GRAPHICS_SRC}")
 set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 17)
 
 set_property(TARGET D3D12Renderer PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CURRENT_WORKING_DIRECTORY}")
-message("${CURRENT_WORKING_DIRECTORY}")
 
 macro(prepare_shaders _source_list _shader_type _shader_model)
     foreach(_source IN ITEMS ${_source_list})
         
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_TYPE "${_shader_type}")
-        # ps_6_0
-        # set_property(SOURCE ${_source} PROPERTY VS_SHADER_PROFILE "${_shader_type}")
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_MODEL "${_shader_model}")
+
+        set_property(SOURCE ${_source} PROPERTY VS_SHADER_FLAGS "/Zi /Od")
 
         # Output filename
         get_filename_component(filename  "${_source}" NAME_WE)
         get_filename_component(abs_directory "${_source}" DIRECTORY)
         get_filename_component(directory "${abs_directory}" NAME)
-
-        message("Final path = ${CURRENT_WORKING_DIRECTORY}\\Shaders\\${directory}_${filename}.cso")
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_OBJECT_FILE_NAME
                      "${CURRENT_WORKING_DIRECTORY}\\Shaders\\${directory}_${filename}.cso")
     endforeach()

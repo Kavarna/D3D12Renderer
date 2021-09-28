@@ -56,6 +56,8 @@ void Direct3D::OnRenderBegin(ID3D12GraphicsCommandList *cmdList)
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(mRTVHeap->GetCPUDescriptorHandleForHeapStart());
     rtvHandle.Offset(activeBackBuffer, GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
+    
+    cmdList->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
     FLOAT backgroundColor[4] = { r, g, b, 1.0f };
     cmdList->ClearRenderTargetView(rtvHandle, backgroundColor, 0, nullptr);
 }
@@ -136,6 +138,11 @@ Result<ComPtr<ID3D12RootSignature>> Direct3D::CreateRootSignature(const D3D12_RO
     return result;
 }
 
+ComPtr<ID3D12Device> Direct3D::GetD3D12Device()
+{
+    return mDevice;
+}
+
 bool Direct3D::AllowTearing()
 {
     static std::optional<bool> tearingEnabled;
@@ -183,6 +190,13 @@ void Direct3D::ExecuteCommandList(ID3D12GraphicsCommandList *cmdList)
         cmdList
     };
     mDirectCommandQueue->ExecuteCommandLists(ARRAYSIZE(cmdLists), cmdLists);
+}
+
+void Direct3D::Flush(ID3D12GraphicsCommandList *cmdList, ID3D12Fence *fence, uint64_t value)
+{
+    ExecuteCommandList(cmdList);
+    Signal(fence, value);
+    WaitForFenceValue(fence, value);
 }
 
 Result<ComPtr<ID3D12CommandQueue>> Direct3D::CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType)

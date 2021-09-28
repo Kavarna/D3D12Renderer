@@ -26,12 +26,16 @@ static constexpr const char *RootSignatureTypeString[] =
 class PipelineManager : public ISingletone<PipelineManager>
 {
     MAKE_SINGLETONE_CAPABLE(PipelineManager);
+    using Vertex = PositionColorVertex;
 private:
     PipelineManager() = default;
     ~PipelineManager() = default;
 
 public:
     bool Init();
+
+public:
+    auto GetPipeline(PipelineType pipeline)->Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>;
 
 private:
     bool InitRootSignatures();

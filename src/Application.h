@@ -2,6 +2,7 @@
 
 
 #include "Oblivion.h"
+#include "Model.h"
 
 class Application
 {
@@ -22,6 +23,13 @@ private:
     bool OnRender();
 
 private:
+    bool InitD3D();
+    bool InitModels();
+
+private:
+    void RenderModels();
+
+private:
     HINSTANCE mInstance = nullptr;
     HWND mWindow = nullptr;
 
@@ -31,9 +39,12 @@ private:
     ComPtr<ID3D12GraphicsCommandList> mCommandList;
 
     ComPtr<ID3D12Fence> mFence;
+    std::vector<Model> mModels;
 
     uint64_t mCurrentFrame = 0;
 
+    D3D12_VIEWPORT mViewport;
+    D3D12_RECT mScissors;
 private:
     unsigned int mClientWidth = 800, mClientHeight = 600;
 

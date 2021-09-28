@@ -81,23 +81,20 @@ bool Application::OnInit()
     auto d3d = Direct3D::Get();
     SHOWINFO("Started initializing application");
 
-    CHECK(d3d->Init(mWindow), false, "Unable to initialize D3D");
-    CHECK(PipelineManager::Get()->Init(), false, "Unable to initialize pipeline manager");
+    mViewport.Width = (FLOAT)mClientWidth;
+    mViewport.Height = (FLOAT)mClientHeight;
+    mViewport.TopLeftX = 0;
+    mViewport.TopLeftY = 0;
+    mViewport.MinDepth = 0.0f;
+    mViewport.MaxDepth = 1.0f;
 
-    auto commandAllocator = d3d->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    CHECK(commandAllocator.Valid(), false, "Unable to create a direct command allocator");
-    mCommandAllocator = commandAllocator.Get();
+    mScissors.left = 0;
+    mScissors.top = 0;
+    mScissors.right = mClientWidth;
+    mScissors.bottom = mClientWidth;
 
-
-    auto commandList = d3d->CreateCommandList(mCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
-    CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
-    mCommandList = commandList.Get();
-    mCommandList->Close();
-
-    auto fence = d3d->CreateFence(0);
-    CHECK(fence.Valid(), false, "Unable to initialize fence with value 0");
-    mFence = fence.Get();
-
+    InitD3D();
+    InitModels();
 
     SHOWINFO("Finished initializing application");
     return true;
@@ -108,6 +105,7 @@ void Application::OnDestroy()
     auto d3d = Direct3D::Get();
     SHOWINFO("Started destroying application");
 
+    Model::Destroy();
     PipelineManager::Destroy();
 
     d3d->Signal(mFence.Get(), mCurrentFrame);
@@ -121,11 +119,24 @@ bool Application::OnRender()
 {
     auto d3d = Direct3D::Get();
 
+    auto pipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::SimpleColor);
+    CHECK(pipelineResult.Valid(), false, "Unable to retrieve pipeline and root signature");
+    auto [pipeline, rootSignature] = pipelineResult.Get();
+
     CHECK_HR(mCommandAllocator->Reset(), false);
-    CHECK_HR(mCommandList->Reset(mCommandAllocator.Get(), nullptr), false);
+    CHECK_HR(mCommandList->Reset(mCommandAllocator.Get(), pipeline), false);
 
     d3d->OnRenderBegin(mCommandList.Get());
     
+    mCommandList->SetGraphicsRootSignature(rootSignature);
+
+    Model::Bind(mCommandList.Get());
+
+    mCommandList->RSSetViewports(1, &mViewport);
+    mCommandList->RSSetScissorRects(1, &mScissors);
+
+    RenderModels();
+
     d3d->OnRenderEnd(mCommandList.Get());
 
     CHECK_HR(mCommandList->Close(), false);
@@ -137,6 +148,61 @@ bool Application::OnRender()
     d3d->Present();
 
     return true;
+}
+
+bool Application::InitD3D()
+{
+    auto d3d = Direct3D::Get();
+
+    CHECK(d3d->Init(mWindow), false, "Unable to initialize D3D");
+    CHECK(PipelineManager::Get()->Init(), false, "Unable to initialize pipeline manager");
+
+    auto commandAllocator = d3d->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    CHECK(commandAllocator.Valid(), false, "Unable to create a direct command allocator");
+    mCommandAllocator = commandAllocator.Get();
+
+
+    auto commandList = d3d->CreateCommandList(mCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+    CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
+    mCommandList = commandList.Get();
+    CHECK_HR(mCommandList->Close(), false);
+
+    auto fence = d3d->CreateFence(0);
+    CHECK(fence.Valid(), false, "Unable to initialize fence with value 0");
+    mFence = fence.Get();
+
+    return true;
+}
+
+bool Application::InitModels()
+{
+    CHECK_HR(mCommandAllocator->Reset(), false);
+    CHECK_HR(mCommandList->Reset(mCommandAllocator.Get(), nullptr), false);
+
+    auto d3d = Direct3D::Get();
+    mModels.emplace_back();
+    CHECK(mModels.back().Create(Model::ModelType::Triangle), false, "Unable to create a simple triangle");
+
+
+    ComPtr<ID3D12Resource> intermediaryResources[2];
+    CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");
+
+    CHECK_HR(mCommandList->Close(), false);
+    d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
+
+    return true;
+}
+
+void Application::RenderModels()
+{
+    for (unsigned int i = 0; i < mModels.size(); ++i)
+    {
+        mCommandList->DrawIndexedInstanced(mModels[i].GetIndexCount(),
+                                           1, // Number of instances
+                                           mModels[i].GetStartIndexLocation(),
+                                           mModels[i].GetBaseVertexLocation(),
+                                           0); // Start InstanceLocation
+    }
 }
 
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)

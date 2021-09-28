@@ -10,6 +10,46 @@ bool PipelineManager::Init()
     return true;
 }
 
+auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>
+{
+    ID3D12PipelineState *pipeline = nullptr;
+    ID3D12RootSignature *rootSignature = nullptr;
+
+    if (auto pipelineIt = mPipelines.find(pipelineType); pipelineIt != mPipelines.end())
+    {
+        pipeline = (*pipelineIt).second.Get();
+    }
+    else
+    {
+        SHOWFATAL("Cannot find pipeline of type {}", PipelineTypeString[(int)pipelineType]);
+        return std::nullopt;
+    }
+
+    if (auto rootSignatureTypeIt = mPipelineToRootSignature.find(pipelineType);
+        rootSignatureTypeIt != mPipelineToRootSignature.end())
+    {
+        if (auto rootSignatureIt = mRootSignatures.find((*rootSignatureTypeIt).second);
+            rootSignatureIt != mRootSignatures.end())
+        {
+            rootSignature = (*rootSignatureIt).second.Get();
+        }
+        else
+        {
+            SHOWFATAL("Cannot find root signature for pipeline type {} and root signature type{}",
+                      PipelineTypeString[(int)pipelineType], RootSignatureTypeString[(int)(*rootSignatureTypeIt).second]);
+            return std::nullopt;
+        }
+    }
+    else
+    {
+        SHOWFATAL("Cannot find root signature type for pipeline type {}", PipelineTypeString[(int)pipelineType]);
+        return std::nullopt;
+    }
+
+    std::tuple<ID3D12PipelineState *, ID3D12RootSignature *> result = { pipeline, rootSignature };
+    return result;
+}
+
 bool PipelineManager::InitRootSignatures()
 {
     CHECK(InitEmptyRootSignature(), false, "Unable to initialize an empty root signature");
@@ -69,8 +109,7 @@ bool PipelineManager::InitSimpleColorPipeline()
           "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
     simpleColorPipeline.pRootSignature = rootSignature->second.Get();
     
-    auto vertexType = VertexType::PositionColorVertex;
-    auto elementDesc = PositionColorVertex::GetInputElementDesc();
+    auto elementDesc = Vertex::GetInputElementDesc();
     simpleColorPipeline.InputLayout.NumElements = (uint32_t)elementDesc.size();
     simpleColorPipeline.InputLayout.pInputElementDescs = elementDesc.data();
 
@@ -84,8 +123,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
 
     auto pipeline = d3d->CreatePipelineSteate(simpleColorPipeline);
-    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {} for vertex type {}",
-          PipelineTypeString[int(type)], VertexTypeString[int(vertexType)]);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
     
     mPipelines[type] = pipeline.Get();
     mShaders[type].push_back(vertexShader);

@@ -31,6 +31,8 @@ public:
     Result<ComPtr<ID3D12PipelineState>> CreatePipelineSteate(const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc);
     Result<ComPtr<ID3D12RootSignature>> CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC &desc);
 
+    ComPtr<ID3D12Device> GetD3D12Device();
+
 public:
     bool AllowTearing();
 
@@ -39,6 +41,7 @@ public:
     void Signal(ID3D12Fence *fence, uint64_t value);
     void WaitForFenceValue(ID3D12Fence *fence, uint64_t value);
     void ExecuteCommandList(ID3D12GraphicsCommandList *cmdList);
+    void Flush(ID3D12GraphicsCommandList *cmdList, ID3D12Fence *fence, uint64_t value);
 
     template <D3D12_DESCRIPTOR_HEAP_TYPE heapType>
     constexpr unsigned int GetDescriptorIncrementSize();
