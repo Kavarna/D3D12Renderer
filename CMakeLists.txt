@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(D3D12Renderer)
-
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_definitions(-DGLOG_NO_ABBREVIATED_SEVERITIES)
+string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
+message("Build type = ${CMAKE_BUILD_TYPE}")
 
 include_directories("src/common")
 

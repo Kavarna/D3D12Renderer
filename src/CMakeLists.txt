@@ -3,7 +3,6 @@ project(D3D12Renderer)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_definitions(-DGLOG_NO_ABBREVIATED_SEVERITIES)
 
 FILE(GLOB SOURCES "*.cpp" "*.h")
 FILE(GLOB COMMON "common/*.cpp" "common/*.h")
@@ -46,7 +45,10 @@ macro(prepare_shaders _source_list _shader_type _shader_model)
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_TYPE "${_shader_type}")
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_MODEL "${_shader_model}")
 
-        set_property(SOURCE ${_source} PROPERTY VS_SHADER_FLAGS "/Zi /Od")
+        if (CMAKE_BUILD_TYPE MATCHES "debug")
+            # Add debug info for shaders
+            set_property(SOURCE ${_source} PROPERTY VS_SHADER_FLAGS "/Zi /Od")
+        endif ()
 
         # Output filename
         get_filename_component(filename  "${_source}" NAME_WE)
