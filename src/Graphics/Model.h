@@ -24,6 +24,7 @@ public:
 
 public:
     bool Create(ModelType type);
+    bool Create(const std::string &path);
 
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);

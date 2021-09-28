@@ -2,6 +2,10 @@
 #include "Utils/Utils.h"
 #include "Direct3D.h"
 
+#include <assimp\Importer.hpp>
+#include <assimp\scene.h>
+#include <assimp\postprocess.h>
+
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
 
@@ -48,6 +52,16 @@ bool Model::Create(ModelType type)
 	}
 
     return true;
+}
+
+bool Model::Create(const std::string &path)
+{
+	CHECK(false, false, "Cannot import models from paths yet . . .");
+	Assimp::Importer importer;
+
+	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
+
+	return false;
 }
 
 bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2])

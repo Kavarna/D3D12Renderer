@@ -1,5 +1,6 @@
 [requires]
 fmt/8.0.1
+assimp/5.0.1
 
 [generators]
 cmake

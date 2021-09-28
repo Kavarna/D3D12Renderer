@@ -183,7 +183,6 @@ bool Application::InitModels()
     mModels.emplace_back();
     CHECK(mModels.back().Create(Model::ModelType::Triangle), false, "Unable to create a simple triangle");
 
-
     ComPtr<ID3D12Resource> intermediaryResources[2];
     CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");
 
