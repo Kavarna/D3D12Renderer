@@ -36,6 +36,7 @@ void Application::Run()
         }
         else
         {
+            CHECKBK(OnUpdate(), "Failed to update frame {}", mCurrentFrame);
             CHECKBK(OnRender(), "Failed to render frame {}", mCurrentFrame);
         }
     }
@@ -105,14 +106,37 @@ void Application::OnDestroy()
     auto d3d = Direct3D::Get();
     SHOWINFO("Started destroying application");
 
-    Model::Destroy();
-    PipelineManager::Destroy();
-
     d3d->Signal(mFence.Get(), mCurrentFrame);
     d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
 
+    Model::Destroy();
+    PipelineManager::Destroy();
+    mWVPBuffer.Destroy();
+
     Direct3D::Destroy();
     SHOWINFO("Finished destroying application");
+}
+
+bool Application::OnUpdate()
+{
+    using namespace DirectX;
+    XMVECTOR eyePosition = XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
+    XMVECTOR eyeDirection = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    XMVECTOR upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+    static float theta = 0.0f;
+    theta += 0.01f;
+    if (theta >= XM_2PI)
+    {
+        theta -= XM_2PI;
+    }
+
+    auto mappedMemory = mWVPBuffer.GetMappedMemory();
+    mappedMemory->World = DirectX::XMMatrixRotationZ(theta);
+    mappedMemory->View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(eyePosition, eyeDirection, upVector));
+    mappedMemory->Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(XM_PIDIV4, 16.0f / 9.0f, 0.1f, 100.0f));
+
+    return true;
 }
 
 bool Application::OnRender()
@@ -129,6 +153,7 @@ bool Application::OnRender()
     d3d->OnRenderBegin(mCommandList.Get());
     
     mCommandList->SetGraphicsRootSignature(rootSignature);
+    mCommandList->SetGraphicsRootConstantBufferView(0, mWVPBuffer.GetResource()->GetGPUVirtualAddress());
 
     Model::Bind(mCommandList.Get());
 
@@ -188,6 +213,8 @@ bool Application::InitModels()
 
     CHECK_HR(mCommandList->Close(), false);
     d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
+
+    CHECK(mWVPBuffer.Init(1, true), false, "Unable to initialize WVP buffer");
 
     return true;
 }

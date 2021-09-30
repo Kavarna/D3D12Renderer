@@ -53,6 +53,8 @@ auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<std::tuple<
 bool PipelineManager::InitRootSignatures()
 {
     CHECK(InitEmptyRootSignature(), false, "Unable to initialize an empty root signature");
+    CHECK(InitSimpleColorRootSignature(), false, "Unable to initialize simple color's root signature");
+
     return true;
 }
 
@@ -81,10 +83,32 @@ bool PipelineManager::InitEmptyRootSignature()
     return true;
 }
 
+bool PipelineManager::InitSimpleColorRootSignature()
+{
+    auto d3d = Direct3D::Get();
+    auto type = RootSignatureType::SimpleColor;
+
+    CD3DX12_ROOT_PARAMETER parameters[1];
+    parameters[0].InitAsConstantBufferView(0);
+
+    D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
+    signatureDesc.NumParameters = ARRAYSIZE(parameters);
+    signatureDesc.pParameters = parameters;
+    signatureDesc.NumStaticSamplers = 0;
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    auto signature = d3d->CreateRootSignature(signatureDesc);
+    CHECK(signature.Valid(), false, "Unable to create a valid empty root signature");
+    mRootSignatures[type] = signature.Get();
+
+    return true;
+}
+
 bool PipelineManager::InitSimpleColorPipeline()
 {
     auto d3d = Direct3D::Get();
     PipelineType type = PipelineType::SimpleColor;
+    RootSignatureType rootSignatureType = RootSignatureType::SimpleColor;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC simpleColorPipeline = {};
 
     simpleColorPipeline.NodeMask = 0;
@@ -104,7 +128,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     simpleColorPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
 
-    auto rootSignature = mRootSignatures.find(RootSignatureType::Empty);
+    auto rootSignature = mRootSignatures.find(rootSignatureType);
     CHECK(!(rootSignature == mRootSignatures.end()), false,
           "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
     simpleColorPipeline.pRootSignature = rootSignature->second.Get();
@@ -128,7 +152,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     mPipelines[type] = pipeline.Get();
     mShaders[type].push_back(vertexShader);
     mShaders[type].push_back(pixelShader);
-    mPipelineToRootSignature[type] = RootSignatureType::Empty;
+    mPipelineToRootSignature[type] = rootSignatureType;
 
     return true;
 }

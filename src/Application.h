@@ -3,6 +3,7 @@
 
 #include "Oblivion.h"
 #include "Model.h"
+#include "Utils/UploadBuffer.h"
 
 class Application
 {
@@ -20,6 +21,7 @@ private:
 private:
     bool OnInit();
     void OnDestroy();
+    bool OnUpdate();
     bool OnRender();
 
 private:
@@ -40,6 +42,16 @@ private:
 
     ComPtr<ID3D12Fence> mFence;
     std::vector<Model> mModels;
+
+
+    struct WVP
+    {
+        DirectX::XMMATRIX World;
+        DirectX::XMMATRIX View;
+        DirectX::XMMATRIX Projection;
+    };
+
+    UploadBuffer<WVP> mWVPBuffer;
 
     uint64_t mCurrentFrame = 0;
 

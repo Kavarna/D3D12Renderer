@@ -8,9 +8,12 @@
 class D3DObject
 {
 public:
-    D3DObject()
+    D3DObject() = default;
+
+    bool Init()
     {
-        Direct3D::Get()->GetD3D12Device();
+        mDevice = Direct3D::Get()->GetD3D12Device();
+        return true;
     }
 
 protected:
