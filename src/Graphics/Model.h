@@ -5,6 +5,10 @@
 #include "Oblivion.h"
 #include "Vertex.h"
 
+#include <assimp\Importer.hpp>
+#include <assimp\scene.h>
+#include <assimp\postprocess.h>
+
 class Model
 {
     using Vertex = PositionColorVertex;
@@ -36,6 +40,10 @@ public:
     uint32_t GetVertexCount() const;
     uint32_t GetBaseVertexLocation() const;
     uint32_t GetStartIndexLocation() const;
+
+private:
+    bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
+    bool ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path);
 
 private:
     struct ModelInfo

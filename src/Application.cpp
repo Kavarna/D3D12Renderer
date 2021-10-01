@@ -127,10 +127,7 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mScissors.right = mClientWidth;
     mScissors.bottom = mClientWidth;
 
-
     d3d->OnResize(width, height);
-
-
 
     return true;
 }
@@ -224,7 +221,8 @@ bool Application::InitModels()
 
     auto d3d = Direct3D::Get();
     mModels.emplace_back();
-    CHECK(mModels.back().Create(Model::ModelType::Triangle), false, "Unable to create a simple triangle");
+    // CHECK(mModels.back().Create(Model::ModelType::Triangle), false, "Unable to create a simple triangle");
+    CHECK(mModels.back().Create("Resources\\Suzanne.obj"), false, "Unable to load Suzanne");
 
     ComPtr<ID3D12Resource> intermediaryResources[2];
     CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");

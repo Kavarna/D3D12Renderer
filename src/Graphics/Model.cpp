@@ -2,10 +2,6 @@
 #include "Utils/Utils.h"
 #include "Direct3D.h"
 
-#include <assimp\Importer.hpp>
-#include <assimp\scene.h>
-#include <assimp\postprocess.h>
-
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
 
@@ -39,6 +35,95 @@ uint32_t Model::GetStartIndexLocation() const
 	return mInfo.StartIndexLocation;
 }
 
+bool Model::ProcessNode(aiNode *node, const aiScene *scene, const std::string &path)
+{
+	SHOWINFO("[Loading Model {}] Loading node with {} meshes and {} nodes", path, node->mNumMeshes, node->mNumChildren);
+	for (unsigned int i = 0; i < node->mNumMeshes; ++i)
+	{
+		CHECK(ProcessMesh(node->mMeshes[i], scene, path),
+			  false, "[Loading Model {}] Unable to load mesh at index {}", i);
+	}
+	SHOWINFO("[Loading Model {}] Done loading {} meshes", path, node->mNumMeshes);
+
+	for (unsigned int i = 0; i < node->mNumChildren; ++i)
+	{
+		CHECK(ProcessNode(node->mChildren[i], scene, path),
+			  false, "[Loading Model {}] Unable to load node at index {}", i);
+	}
+	SHOWINFO("[Loading Model {}] Done loading {} nodes", path, node->mNumChildren);
+
+	return true;
+}
+
+bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path)
+{
+	auto mesh = scene->mMeshes[meshId];
+
+	std::string meshName = mesh->mName.C_Str();
+	unsigned int index = 0;
+	do
+	{
+		if (auto foundMeshIt = mModelsRenderParameters.find(meshName); foundMeshIt != mModelsRenderParameters.end())
+		{
+			auto renderParameters = (*foundMeshIt).second;
+
+			// If needed, compare vertices & indices one by one
+			if (mesh->mNumVertices == renderParameters.VertexCount &&
+				(mesh->mNumFaces * 3) == renderParameters.IndexCount)
+			{
+				SHOWINFO("[Loading Model {}] Mesh {} loaded once, using that version", path, meshName);
+				return true;
+			}
+			else
+			{
+				meshName += std::to_string(index++);
+			}
+		}
+		else
+			break;
+	} while (true);
+
+	std::vector<Vertex> vertices;
+	vertices.reserve(mesh->mNumVertices);
+	for (uint32_t i = 0; i < mesh->mNumVertices; ++i)
+	{
+		Vertex currentVertex;
+		currentVertex.Position = { mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z };
+		currentVertex.Color = { 1.0f, 1.0f, 0.0f, 1.0f }; // Default good enough color
+
+		vertices.push_back(std::move(currentVertex));
+	}
+
+	std::vector<uint32_t> indices;
+	indices.reserve(mesh->mNumFaces * 3);
+	for (uint32_t i = 0; i < mesh->mNumFaces; ++i)
+	{
+		CHECK((mesh->mFaces[i].mNumIndices == 3), false,
+			  "[Loading Model {}] In mesh {} found at face found invalid number of indices: expected 3, but found {}",
+			  path, meshName, mesh->mFaces[i].mNumIndices);
+
+		indices.emplace_back(mesh->mFaces[i].mIndices[0]);
+		indices.emplace_back(mesh->mFaces[i].mIndices[1]);
+		indices.emplace_back(mesh->mFaces[i].mIndices[2]);
+	}
+
+	mModelsRenderParameters[meshName].BaseVertexLocation = (uint32_t)mVertices.size();
+	mModelsRenderParameters[meshName].StartIndexLocation = (uint32_t)mIndices.size();
+	mModelsRenderParameters[meshName].VertexCount = (uint32_t)vertices.size();
+	mModelsRenderParameters[meshName].IndexCount = (uint32_t)indices.size();
+
+	mVertices.reserve(mVertices.size() + (uint32_t)vertices.size());
+	std::move(std::begin(vertices), std::end(vertices), std::back_inserter(mVertices));
+
+	mIndices.reserve(mIndices.size() + (uint32_t)indices.size());
+	std::move(std::begin(indices), std::end(indices), std::back_inserter(mIndices));
+
+	SHOWINFO("[Loading Model {}] Done loading mesh {}", path, meshName);
+
+	mInfo = mModelsRenderParameters[meshName];
+	return true;
+}
+
 bool Model::Create(ModelType type)
 {
 	switch (type)
@@ -56,12 +141,15 @@ bool Model::Create(ModelType type)
 
 bool Model::Create(const std::string &path)
 {
-	CHECK(false, false, "Cannot import models from paths yet . . .");
 	Assimp::Importer importer;
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
 
-	return false;
+
+	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,
+		  "Unable to load model located at path {}", path);
+
+	return true;
 }
 
 bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2])

@@ -60,6 +60,12 @@ using Microsoft::WRL::ComPtr;
 #include "KeyCodes.h"
 #include "Result.h"
 
+
+// Libs stuff
+#include <effolkronium/random.hpp>
+using Random = effolkronium::random_static;
+
+
 #define _KiB(x) (x * 1024)
 #define _MiB(x) (x * 1024 * 1024)
 
