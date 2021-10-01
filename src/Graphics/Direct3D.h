@@ -9,6 +9,7 @@ class Direct3D : public ISingletone<Direct3D>
 public:
     static constexpr const auto kBufferCount = 3;
     static constexpr const auto kBackbufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    static constexpr const auto kDepthStencilFormat = DXGI_FORMAT_D32_FLOAT;
 private:
     Direct3D() = default;
     ~Direct3D() = default;
@@ -47,6 +48,7 @@ public:
     constexpr unsigned int GetDescriptorIncrementSize();
 
 private:
+    Result<ComPtr<ID3D12Resource>> CreateDepthStencilBuffer();
     Result<ComPtr<ID3D12CommandQueue>> CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType);
     Result<ComPtr<IDXGISwapChain4>> CreateSwapchain(HWND hwnd);
 
@@ -68,8 +70,10 @@ private:
     ComPtr<IDXGISwapChain4> mSwapchain;
 
     ComPtr<ID3D12DescriptorHeap> mRTVHeap;
+    ComPtr<ID3D12DescriptorHeap> mDSVHeap;
 
     std::array<ComPtr<ID3D12Resource>, kBufferCount> mSwapchainResources;
+    ComPtr<ID3D12Resource> mDepthStencilResource;
 
     bool mVsync = true;
 };

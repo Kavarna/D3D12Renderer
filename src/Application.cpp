@@ -70,7 +70,8 @@ bool Application::InitWindow()
 
     mWindow = CreateWindow(ENGINE_NAME, APPLICATION_NAME,
                            WS_OVERLAPPEDWINDOW, windowX, windowY,
-                           windowWidth, windowHeight, nullptr, nullptr, mInstance, nullptr);
+                           windowWidth, windowHeight, nullptr, nullptr, mInstance,
+                           this);
     CHECK(mWindow, false, "Unable to create window");
 
     SHOWINFO("Created window with size {}x{}", mClientWidth, mClientHeight);
@@ -81,18 +82,6 @@ bool Application::OnInit()
 {
     auto d3d = Direct3D::Get();
     SHOWINFO("Started initializing application");
-
-    mViewport.Width = (FLOAT)mClientWidth;
-    mViewport.Height = (FLOAT)mClientHeight;
-    mViewport.TopLeftX = 0;
-    mViewport.TopLeftY = 0;
-    mViewport.MinDepth = 0.0f;
-    mViewport.MaxDepth = 1.0f;
-
-    mScissors.left = 0;
-    mScissors.top = 0;
-    mScissors.right = mClientWidth;
-    mScissors.bottom = mClientWidth;
 
     InitD3D();
     InitModels();
@@ -115,6 +104,30 @@ void Application::OnDestroy()
 
     Direct3D::Destroy();
     SHOWINFO("Finished destroying application");
+}
+
+bool Application::OnResize(uint32_t width, uint32_t height)
+{
+    auto d3d = Direct3D::Get();
+    d3d->Signal(mFence.Get(), mCurrentFrame);
+    d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
+
+    SHOWINFO("Window resized from {}x{} to {}x{}", mClientWidth, mClientHeight, width, height);
+    mClientWidth = width, mClientHeight = height;
+
+    mViewport.Width = (FLOAT)mClientWidth;
+    mViewport.Height = (FLOAT)mClientHeight;
+    mViewport.TopLeftX = 0;
+    mViewport.TopLeftY = 0;
+    mViewport.MinDepth = 0.0f;
+    mViewport.MaxDepth = 1.0f;
+
+    mScissors.left = 0;
+    mScissors.top = 0;
+    mScissors.right = mClientWidth;
+    mScissors.bottom = mClientWidth;
+
+    return true;
 }
 
 bool Application::OnUpdate()
@@ -233,8 +246,32 @@ void Application::RenderModels()
 
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    static Application *app;
     switch (message)
     {
+        case WM_CREATE:
+        {
+            CREATESTRUCT *createInfo = (CREATESTRUCT *)lParam;
+            app = (Application *)createInfo->lpCreateParams;
+            break;
+        }
+        case WM_SIZE:
+        {
+            uint32_t width = ((uint32_t)(short)LOWORD(lParam));
+            uint32_t height = ((uint32_t)(short)HIWORD(lParam));
+            if (!(width == 0 || height == 0))
+            {
+                app->OnResize(width, height);
+            }
+            break;
+        }
+        case WM_GETMINMAXINFO:
+        {
+            LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+            lpMMI->ptMinTrackSize.x = kMINIMUM_WINDOW_SIZE;
+            lpMMI->ptMinTrackSize.y = kMINIMUM_WINDOW_SIZE;
+        }
+        break;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;

@@ -21,7 +21,12 @@ bool Direct3D::Init(HWND hwnd)
     ASSIGN_RESULT(mDirectCommandQueue, CreateCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT), false, "Cannot initialize direct command queue");
     ASSIGN_RESULT(mSwapchain, CreateSwapchain(hwnd), false, "Cannot create swapchain");
     ASSIGN_RESULT(mRTVHeap, CreateDescriptorHeap(kBufferCount, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
-                  false, "Unable to create a descriptor heap with {} descriptors", kBufferCount);
+                  false, "Unable to create a rtv descriptor heap with {} descriptors", kBufferCount);
+    ASSIGN_RESULT(mDSVHeap, CreateDescriptorHeap(1, D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
+                  false, "Unable to create a dsv descriptor heap with 1 descriptor");
+
+    ASSIGN_RESULT(mDepthStencilResource, CreateDepthStencilBuffer(),
+                  false, "Unable to create a depth stencil buffer");
 
     CHECK(UpdateDescriptors(), false, "Unable to update descriptors");
 
@@ -35,7 +40,8 @@ void Direct3D::OnRenderBegin(ID3D12GraphicsCommandList *cmdList)
     Transition(cmdList, mSwapchainResources[activeBackBuffer].Get(),
                D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    static float r = 0.5f, g = 0.5f, b = 0.5f;
+    static float r = 0.0f, g = 0.0f, b = 0.0f;
+#ifdef COLORFUL_BACKGROUND
     static int32_t dr = 1, dg = 1, db = 1;
     r += dr * 0.001f;
     g += dg * 0.003f;
@@ -53,13 +59,16 @@ void Direct3D::OnRenderBegin(ID3D12GraphicsCommandList *cmdList)
     {
         db *= -1;
     }
+#endif // COLORFUL_BACKGROUND
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(mRTVHeap->GetCPUDescriptorHandleForHeapStart());
     rtvHandle.Offset(activeBackBuffer, GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
-    
-    cmdList->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(mDSVHeap->GetCPUDescriptorHandleForHeapStart());
+
+    cmdList->OMSetRenderTargets(1, &rtvHandle, TRUE, &dsvHandle);
     FLOAT backgroundColor[4] = { r, g, b, 1.0f };
     cmdList->ClearRenderTargetView(rtvHandle, backgroundColor, 0, nullptr);
+    cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 }
 
 void Direct3D::OnRenderEnd(ID3D12GraphicsCommandList *cmdList)
@@ -199,6 +208,33 @@ void Direct3D::Flush(ID3D12GraphicsCommandList *cmdList, ID3D12Fence *fence, uin
     WaitForFenceValue(fence, value);
 }
 
+Result<ComPtr<ID3D12Resource>> Direct3D::CreateDepthStencilBuffer()
+{
+    CHECK(mSwapchain, std::nullopt, "Cannot create a default depth stencil buffer without a valid swapchain");
+
+    DXGI_SWAP_CHAIN_DESC swapchainDesc;
+    CHECK_HR(mSwapchain->GetDesc(&swapchainDesc), std::nullopt);
+
+    auto defaultHeapBuffer = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    auto textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(kDepthStencilFormat,
+                                                    swapchainDesc.BufferDesc.Width,
+                                                    swapchainDesc.BufferDesc.Height);
+    textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    D3D12_CLEAR_VALUE optimizedClearValue;
+    optimizedClearValue.Format = kDepthStencilFormat;
+    optimizedClearValue.DepthStencil.Depth = 1.0f;
+    optimizedClearValue.DepthStencil.Stencil = 0;
+
+    ComPtr<ID3D12Resource> depthBuffer;
+
+    CHECK_HR(mDevice->CreateCommittedResource(
+        &defaultHeapBuffer, D3D12_HEAP_FLAG_NONE, &textureDesc,
+        D3D12_RESOURCE_STATE_DEPTH_WRITE, &optimizedClearValue,
+        IID_PPV_ARGS(&depthBuffer)), std::nullopt);
+
+    return depthBuffer;
+}
+
 Result<ComPtr<ID3D12CommandQueue>> Direct3D::CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType)
 {
     ComPtr<ID3D12CommandQueue> queue;
@@ -316,6 +352,13 @@ bool Direct3D::UpdateDescriptors()
         cpuHandle.Offset(1, GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
     }
 
-    SHOWINFO("Successfully updated {} descriptors", kBufferCount);
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+    dsvDesc.Format = kDepthStencilFormat;
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Texture2D.MipSlice = 0;
+    mDevice->CreateDepthStencilView(mDepthStencilResource.Get(), &dsvDesc, mDSVHeap->GetCPUDescriptorHandleForHeapStart());
+
+    SHOWINFO("Successfully updated {} descriptors", kBufferCount + 1);
     return true;
 }

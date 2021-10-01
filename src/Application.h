@@ -7,6 +7,7 @@
 
 class Application
 {
+    static constexpr const auto kMINIMUM_WINDOW_SIZE = 200;
 public:
     Application() = default;
     ~Application() = default;
@@ -21,6 +22,7 @@ private:
 private:
     bool OnInit();
     void OnDestroy();
+    bool OnResize(uint32_t width, uint32_t height);
     bool OnUpdate();
     bool OnRender();
 
