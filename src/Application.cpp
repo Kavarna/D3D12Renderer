@@ -127,6 +127,11 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mScissors.right = mClientWidth;
     mScissors.bottom = mClientWidth;
 
+
+    d3d->OnResize(width, height);
+
+
+
     return true;
 }
 

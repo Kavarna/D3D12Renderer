@@ -34,6 +34,28 @@ bool Direct3D::Init(HWND hwnd)
     return true;
 }
 
+bool Direct3D::OnResize(uint32_t width, uint32_t height)
+{
+    for (unsigned int i = 0; i < kBufferCount; ++i)
+    {
+        mSwapchainResources[i].Reset();
+    }
+    mDepthStencilResource.Reset();
+
+    DXGI_SWAP_CHAIN_DESC swapchainDesc;
+    CHECK_HR(mSwapchain->GetDesc(&swapchainDesc), false);
+
+    CHECK_HR(mSwapchain->ResizeBuffers(
+        kBufferCount, width, height, kBackbufferFormat,
+        swapchainDesc.Flags), false);
+
+    ASSIGN_RESULT(mDepthStencilResource, CreateDepthStencilBuffer(width, height),
+                  false, "Unable to create a depth stencil buffer");
+
+
+    return UpdateDescriptors();
+}
+
 void Direct3D::OnRenderBegin(ID3D12GraphicsCommandList *cmdList)
 {
     uint32_t activeBackBuffer = mSwapchain->GetCurrentBackBufferIndex();
@@ -214,11 +236,15 @@ Result<ComPtr<ID3D12Resource>> Direct3D::CreateDepthStencilBuffer()
 
     DXGI_SWAP_CHAIN_DESC swapchainDesc;
     CHECK_HR(mSwapchain->GetDesc(&swapchainDesc), std::nullopt);
+    
+    return CreateDepthStencilBuffer(swapchainDesc.BufferDesc.Width, swapchainDesc.BufferDesc.Height);
+}
 
+Result<ComPtr<ID3D12Resource>> Direct3D::CreateDepthStencilBuffer(uint32_t width, uint32_t height)
+{
     auto defaultHeapBuffer = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    auto textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(kDepthStencilFormat,
-                                                    swapchainDesc.BufferDesc.Width,
-                                                    swapchainDesc.BufferDesc.Height);
+    auto textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(kDepthStencilFormat, width, height);
+
     textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     D3D12_CLEAR_VALUE optimizedClearValue;
     optimizedClearValue.Format = kDepthStencilFormat;

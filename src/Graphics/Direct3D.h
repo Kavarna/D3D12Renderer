@@ -18,6 +18,8 @@ public:
     bool Init(HWND hwnd);
 
 public:
+    bool OnResize(uint32_t width, uint32_t height);
+
     void OnRenderBegin(ID3D12GraphicsCommandList *cmdList);
     void OnRenderEnd(ID3D12GraphicsCommandList *cmdList);
     void Present();
@@ -49,6 +51,7 @@ public:
 
 private:
     Result<ComPtr<ID3D12Resource>> CreateDepthStencilBuffer();
+    Result<ComPtr<ID3D12Resource>> CreateDepthStencilBuffer(uint32_t width, uint32_t height);
     Result<ComPtr<ID3D12CommandQueue>> CreateCommandQueue(D3D12_COMMAND_LIST_TYPE queueType);
     Result<ComPtr<IDXGISwapChain4>> CreateSwapchain(HWND hwnd);
 
