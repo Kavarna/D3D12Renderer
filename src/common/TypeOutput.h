@@ -34,14 +34,7 @@ struct fmt::formatter<DirectX::XMFLOAT2>
 {
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin())
     {
-        auto it = ctx.begin(), end = ctx.end();
-        it++;
-
-        // Check if reached the end of the range:
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-
-        return it;
+        return ctx.begin();
     }
 
     template <typename FormatContext>
@@ -59,14 +52,7 @@ struct fmt::formatter<DirectX::XMFLOAT3>
 {
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin())
     {
-        auto it = ctx.begin(), end = ctx.end();
-        it++;
-
-        // Check if reached the end of the range:
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-
-        return it;
+        return ctx.begin();
     }
 
     template <typename FormatContext>
@@ -85,14 +71,7 @@ struct fmt::formatter<DirectX::XMFLOAT4>
 {
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin())
     {
-        auto it = ctx.begin(), end = ctx.end();
-        it++;
-
-        // Check if reached the end of the range:
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-
-        return it;
+        return ctx.begin();
     }
 
     template <typename FormatContext>
@@ -104,3 +83,4 @@ struct fmt::formatter<DirectX::XMFLOAT4>
             p.x, p.y, p.z, p.w);
     }
 };
+

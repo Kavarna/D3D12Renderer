@@ -140,6 +140,9 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mScissors.right = mClientWidth;
     mScissors.bottom = mClientWidth;
 
+    mCamera.Create(mCamera.GetPosition(), mCamera.GetDirection(), mCamera.GetRightDirection(),
+                   (float)mClientWidth / mClientHeight);
+
     d3d->OnResize(width, height);
 
     return true;
@@ -147,9 +150,9 @@ bool Application::OnResize(uint32_t width, uint32_t height)
 
 bool Application::OnUpdate()
 {
+    float dt = 1.0f / ImGui::GetIO().Framerate;
+
     auto d3d = Direct3D::Get();
-    auto kb = mKeyboard->GetState();
-    auto mouse = mMouse->GetState();
     mCurrentFrameResourceIndex = (mCurrentFrameResourceIndex + 1) % Direct3D::kBufferCount;
     mCurrentFrameResource = &mFrameResources[mCurrentFrameResourceIndex];
     if (mCurrentFrameResource->FenceValue != 0 && mFence->GetCompletedValue() < mCurrentFrameResource->FenceValue)
@@ -157,25 +160,7 @@ bool Application::OnUpdate()
         d3d->WaitForFenceValue(mFence.Get(), mCurrentFrameResource->FenceValue);
     }
 
-    static bool bRightClick = false;
-    if (mouse.rightButton && !bRightClick)
-    {
-        bRightClick = true;
-        if (mMenuActive)
-        {
-            mMouse->SetMode(DirectX::Mouse::Mode::MODE_RELATIVE);
-            while (ShowCursor(FALSE) > 0);
-        }
-        else
-        {
-            mMouse->SetMode(DirectX::Mouse::Mode::MODE_ABSOLUTE);
-            while (ShowCursor(TRUE) <= 0);
-        }
-        mMenuActive = !mMenuActive;
-    }
-    else if (!mouse.rightButton)
-        bRightClick = false;
-
+    ReactToKeyPresses(dt);
     UpdateModels();
     UpdatePassBuffers();
 
@@ -277,6 +262,9 @@ bool Application::InitModels()
     CHECK_HR(mCommandList->Close(), false);
     d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
 
+    mCamera.Create({ 0.0f, 0.0f, -3.0f }, { 0.0f, 0.0f, +1.0f }, { 1.0f, 0.0f, 0.0f },
+                   (float)mClientWidth / mClientHeight);
+
     return true;
 }
 
@@ -315,6 +303,64 @@ bool Application::InitImgui()
     return true;
 }
 
+void Application::ReactToKeyPresses(float dt)
+{
+    auto kb = mKeyboard->GetState();
+    auto mouse = mMouse->GetState();
+
+    if (kb.Escape)
+    {
+        PostQuitMessage(0);
+    }
+
+    if (!mMenuActive)
+    {
+        if (kb.W)
+        {
+            mCamera.MoveForward(dt);
+        }
+        if (kb.S)
+        {
+            mCamera.MoveBackward(dt);
+        }
+        if (kb.D)
+        {
+            mCamera.MoveRight(dt);
+        }
+        if (kb.A)
+        {
+            mCamera.MoveLeft(dt);
+        }
+
+        mouse.x = Math::clamp(mouse.x, -25, 25);
+        mouse.y = Math::clamp(mouse.y, -25, 25);
+        mCamera.Update(dt, (float)mouse.x, (float)mouse.y);
+    }
+    else
+    {
+        mCamera.Update(dt, 0.0f, 0.0f);
+    }
+
+    static bool bRightClick = false;
+    if (mouse.rightButton && !bRightClick)
+    {
+        bRightClick = true;
+        if (mMenuActive)
+        {
+            mMouse->SetMode(DirectX::Mouse::Mode::MODE_RELATIVE);
+            while (ShowCursor(FALSE) > 0);
+        }
+        else
+        {
+            mMouse->SetMode(DirectX::Mouse::Mode::MODE_ABSOLUTE);
+            while (ShowCursor(TRUE) <= 0);
+        }
+        mMenuActive = !mMenuActive;
+    }
+    else if (!mouse.rightButton)
+        bRightClick = false;
+}
+
 void Application::UpdateModels()
 {
     for (auto &model : mModels)
@@ -331,14 +377,14 @@ void Application::UpdateModels()
 
 void Application::UpdatePassBuffers()
 {
-    using namespace DirectX;
-    XMVECTOR eyePosition = XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
-    XMVECTOR eyeDirection = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-    XMVECTOR upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    if (mCamera.DirtyFrames > 0)
+    {
+        auto mappedMemory = mCurrentFrameResource->PerPassBuffers.GetMappedMemory();
+        mappedMemory->View = DirectX::XMMatrixTranspose(mCamera.GetView());
+        mappedMemory->Projection = DirectX::XMMatrixTranspose(mCamera.GetProjection());
 
-    auto mappedMemory = mCurrentFrameResource->PerPassBuffers.GetMappedMemory();
-    mappedMemory->View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(eyePosition, eyeDirection, upVector));
-    mappedMemory->Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)mClientWidth / mClientHeight, 0.1f, 100.0f));
+        mCamera.DirtyFrames--;
+    }
 }
 
 void Application::RenderModels()

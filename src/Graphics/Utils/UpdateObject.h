@@ -5,10 +5,17 @@
 class UpdateObject
 {
 public:
-    UpdateObject() = delete;
+    UpdateObject() = default;
     UpdateObject(unsigned int maxDirtyFrames, unsigned int constantBufferIndex = 0):
         mMaxDirtyFrames(maxDirtyFrames), ConstantBufferIndex(constantBufferIndex)
     {
+        DirtyFrames = mMaxDirtyFrames;
+    }
+
+    void Init(unsigned int maxDirtyFrames, unsigned int constantBufferIndex = 0)
+    {
+        mMaxDirtyFrames = maxDirtyFrames;
+        ConstantBufferIndex = ConstantBufferIndex;
         DirtyFrames = mMaxDirtyFrames;
     }
 

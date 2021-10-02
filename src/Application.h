@@ -4,6 +4,7 @@
 #include <Oblivion.h>
 #include "Model.h"
 #include "FrameResources.h"
+#include "Camera.h"
 
 #include "Keyboard.h"
 #include "Mouse.h"
@@ -37,6 +38,7 @@ private:
     bool InitImgui();
 
 private:
+    void ReactToKeyPresses(float dt);
     void UpdateModels();
     void UpdatePassBuffers();
     void RenderModels();
@@ -52,6 +54,8 @@ private:
     ComPtr<ID3D12GraphicsCommandList> mCommandList;
 
     ComPtr<ID3D12DescriptorHeap> mImguiDescriptorHeap;
+
+    Camera mCamera;
 
     ComPtr<ID3D12Fence> mFence;
     std::vector<Model> mModels;

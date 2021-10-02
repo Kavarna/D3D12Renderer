@@ -131,4 +131,11 @@ namespace Math {
                 throw std::exception("What kind of axis did you pass?");
         }
     }
+
+    /// Clamps a value between lower and upper
+    template <class type>
+    inline type clamp(type &x, type lower, type upper)
+    {
+        return std::max(lower, std::min(x, upper));
+    }
 }
