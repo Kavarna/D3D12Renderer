@@ -3,7 +3,7 @@
 
 #include "Oblivion.h"
 #include "Model.h"
-#include "Utils/UploadBuffer.h"
+#include "FrameResources.h"
 
 class Application
 {
@@ -29,6 +29,7 @@ private:
 private:
     bool InitD3D();
     bool InitModels();
+    bool InitFrameResources();
 
 private:
     void RenderModels();
@@ -39,21 +40,15 @@ private:
 
 private:
     // D3D Objects
-    ComPtr<ID3D12CommandAllocator> mCommandAllocator;
+    ComPtr<ID3D12CommandAllocator> mInitializationCommandAllocator;
     ComPtr<ID3D12GraphicsCommandList> mCommandList;
 
     ComPtr<ID3D12Fence> mFence;
     std::vector<Model> mModels;
 
-
-    struct WVP
-    {
-        DirectX::XMMATRIX World;
-        DirectX::XMMATRIX View;
-        DirectX::XMMATRIX Projection;
-    };
-
-    UploadBuffer<WVP> mWVPBuffer;
+    std::array<FrameResources, Direct3D::kBufferCount> mFrameResources;
+    FrameResources *mCurrentFrameResource;
+    uint32_t mCurrentFrameResourceIndex = 0;
 
     uint64_t mCurrentFrame = 0;
 

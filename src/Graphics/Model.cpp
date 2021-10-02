@@ -129,6 +129,11 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	return true;
 }
 
+Model::Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex) : 
+	UpdateObject(maxDirtyFrames, constantBufferIndex), mWorld(DirectX::XMMatrixIdentity())
+{
+}
+
 bool Model::Create(ModelType type)
 {
 	switch (type)
@@ -136,6 +141,7 @@ bool Model::Create(ModelType type)
 		case Model::ModelType::Triangle:
 			CHECK(CreateTriangle(), false, "Unable to create triangle");
 			break;
+		// TODO: add more default shapes
 		default:
 			SHOWFATAL("Model type {} is not a valid model", (int)type);
 			return false;

@@ -2,9 +2,13 @@
 #define __COMMON_HLSLI__
 
 
-cbuffer WVP : register(b0)
+cbuffer cbPerObject : register(b0)
 {
     float4x4 World;
+};
+
+cbuffer cbPerFrame : register(b1)
+{
     float4x4 View;
     float4x4 Projection;
 };

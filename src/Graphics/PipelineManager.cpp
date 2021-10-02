@@ -88,8 +88,9 @@ bool PipelineManager::InitSimpleColorRootSignature()
     auto d3d = Direct3D::Get();
     auto type = RootSignatureType::SimpleColor;
 
-    CD3DX12_ROOT_PARAMETER parameters[1];
+    CD3DX12_ROOT_PARAMETER parameters[2];
     parameters[0].InitAsConstantBufferView(0);
+    parameters[1].InitAsConstantBufferView(1);
 
     D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
     signatureDesc.NumParameters = ARRAYSIZE(parameters);

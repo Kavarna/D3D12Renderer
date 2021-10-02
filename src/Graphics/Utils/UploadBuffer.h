@@ -9,7 +9,10 @@ class UploadBuffer : public D3DObject
 {
 public:
     UploadBuffer() = default;
-
+    ~UploadBuffer()
+    {
+        CHECKSHOW(Destroy(), "Unable to destroy an upload buffer");
+    }
 
     bool Init(unsigned int elementCount = 1, bool isConstantBuffer = false)
     {

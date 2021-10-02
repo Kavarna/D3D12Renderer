@@ -83,8 +83,9 @@ bool Application::OnInit()
     auto d3d = Direct3D::Get();
     SHOWINFO("Started initializing application");
 
-    InitD3D();
-    InitModels();
+    CHECK(InitD3D(), false, "Unable to initialize D3D");
+    CHECK(InitModels(), false, "Unable to load all models");
+    CHECK(InitFrameResources(), false, "Unable to initialize Frame Resources");
 
     SHOWINFO("Finished initializing application");
     return true;
@@ -100,7 +101,6 @@ void Application::OnDestroy()
 
     Model::Destroy();
     PipelineManager::Destroy();
-    mWVPBuffer.Destroy();
 
     Direct3D::Destroy();
     SHOWINFO("Finished destroying application");
@@ -134,22 +134,13 @@ bool Application::OnResize(uint32_t width, uint32_t height)
 
 bool Application::OnUpdate()
 {
-    using namespace DirectX;
-    XMVECTOR eyePosition = XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
-    XMVECTOR eyeDirection = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-    XMVECTOR upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-    static float theta = 0.0f;
-    theta += 0.01f;
-    if (theta >= XM_2PI)
+    auto d3d = Direct3D::Get();
+    mCurrentFrameResourceIndex = (mCurrentFrameResourceIndex + 1) % Direct3D::kBufferCount;
+    mCurrentFrameResource = &mFrameResources[mCurrentFrameResourceIndex];
+    if (mCurrentFrameResource->FenceValue != 0 && mFence->GetCompletedValue() < mCurrentFrameResource->FenceValue)
     {
-        theta -= XM_2PI;
+        d3d->WaitForFenceValue(mFence.Get(), mCurrentFrameResource->FenceValue);
     }
-
-    auto mappedMemory = mWVPBuffer.GetMappedMemory();
-    mappedMemory->World = DirectX::XMMatrixRotationY(theta);
-    mappedMemory->View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(eyePosition, eyeDirection, upVector));
-    mappedMemory->Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)mClientWidth / mClientHeight, 0.1f, 100.0f));
 
     return true;
 }
@@ -162,30 +153,28 @@ bool Application::OnRender()
     CHECK(pipelineResult.Valid(), false, "Unable to retrieve pipeline and root signature");
     auto [pipeline, rootSignature] = pipelineResult.Get();
 
-    CHECK_HR(mCommandAllocator->Reset(), false);
-    CHECK_HR(mCommandList->Reset(mCommandAllocator.Get(), pipeline), false);
+    CHECK_HR(mCurrentFrameResource->CommandAllocator->Reset(), false);
+    CHECK_HR(mCommandList->Reset(mCurrentFrameResource->CommandAllocator.Get(), pipeline), false);
 
-    d3d->OnRenderBegin(mCommandList.Get());
-    
+    d3d->OnRenderBegin(mCommandList.Get());    
     mCommandList->SetGraphicsRootSignature(rootSignature);
-    mCommandList->SetGraphicsRootConstantBufferView(0, mWVPBuffer.GetResource()->GetGPUVirtualAddress());
 
     Model::Bind(mCommandList.Get());
 
     mCommandList->RSSetViewports(1, &mViewport);
     mCommandList->RSSetScissorRects(1, &mScissors);
 
-    RenderModels();
+    // RenderModels();
 
     d3d->OnRenderEnd(mCommandList.Get());
 
     CHECK_HR(mCommandList->Close(), false);
 
     d3d->ExecuteCommandList(mCommandList.Get());
-    d3d->Signal(mFence.Get(), mCurrentFrame);
-    d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
-
     d3d->Present();
+    d3d->Signal(mFence.Get(), mCurrentFrame);
+  
+    mCurrentFrameResource->FenceValue = mCurrentFrame++;
 
     return true;
 }
@@ -199,10 +188,10 @@ bool Application::InitD3D()
 
     auto commandAllocator = d3d->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT);
     CHECK(commandAllocator.Valid(), false, "Unable to create a direct command allocator");
-    mCommandAllocator = commandAllocator.Get();
+    mInitializationCommandAllocator = commandAllocator.Get();
 
 
-    auto commandList = d3d->CreateCommandList(mCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto commandList = d3d->CreateCommandList(mInitializationCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
     CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
     mCommandList = commandList.Get();
     CHECK_HR(mCommandList->Close(), false);
@@ -216,12 +205,11 @@ bool Application::InitD3D()
 
 bool Application::InitModels()
 {
-    CHECK_HR(mCommandAllocator->Reset(), false);
-    CHECK_HR(mCommandList->Reset(mCommandAllocator.Get(), nullptr), false);
+    CHECK_HR(mInitializationCommandAllocator->Reset(), false);
+    CHECK_HR(mCommandList->Reset(mInitializationCommandAllocator.Get(), nullptr), false);
 
     auto d3d = Direct3D::Get();
-    mModels.emplace_back();
-    // CHECK(mModels.back().Create(Model::ModelType::Triangle), false, "Unable to create a simple triangle");
+    mModels.emplace_back(Direct3D::kBufferCount, 0);
     CHECK(mModels.back().Create("Resources\\Suzanne.obj"), false, "Unable to load Suzanne");
 
     ComPtr<ID3D12Resource> intermediaryResources[2];
@@ -230,7 +218,19 @@ bool Application::InitModels()
     CHECK_HR(mCommandList->Close(), false);
     d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
 
-    CHECK(mWVPBuffer.Init(1, true), false, "Unable to initialize WVP buffer");
+    return true;
+}
+
+bool Application::InitFrameResources()
+{
+    uint32_t numModels = (uint32_t)mModels.size();
+    uint32_t numPasses = 1;
+
+    for (unsigned int i = 0; i < mFrameResources.size(); ++i)
+    {
+        CHECK(mFrameResources[i].Init(numModels, numPasses), false, "Unable to init frame resource at index {}", i);
+    }
+    
 
     return true;
 }

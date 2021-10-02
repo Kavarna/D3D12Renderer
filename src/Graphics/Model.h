@@ -4,12 +4,13 @@
 
 #include "Oblivion.h"
 #include "Vertex.h"
+#include "Utils/UpdateObject.h"
 
 #include <assimp\Importer.hpp>
 #include <assimp\scene.h>
 #include <assimp\postprocess.h>
 
-class Model
+class Model : public UpdateObject
 {
     using Vertex = PositionColorVertex;
 public:
@@ -23,7 +24,8 @@ public:
     };
 
 public:
-    Model() = default;
+    Model() = delete;
+    Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex);
     ~Model() = default;
 
 public:
@@ -79,5 +81,6 @@ private:
     bool CreateTriangle();
 
 private:
+    DirectX::XMMATRIX mWorld;
     RenderParameters mInfo;
 };
