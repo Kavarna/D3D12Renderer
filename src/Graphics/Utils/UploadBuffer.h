@@ -55,6 +55,12 @@ public:
         return mMappedResource.Get();
     }
 
+    // Use this as a shortcut
+    D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const
+    {
+        return mMappedResource->GetGPUVirtualAddress();
+    }
+
     unsigned int GetElementSize() const
     {
         return mElementSize;

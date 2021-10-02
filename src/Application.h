@@ -32,6 +32,8 @@ private:
     bool InitFrameResources();
 
 private:
+    void UpdateModels();
+    void UpdatePassBuffers();
     void RenderModels();
 
 private:

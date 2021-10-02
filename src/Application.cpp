@@ -142,6 +142,9 @@ bool Application::OnUpdate()
         d3d->WaitForFenceValue(mFence.Get(), mCurrentFrameResource->FenceValue);
     }
 
+    UpdateModels();
+    UpdatePassBuffers();
+
     return true;
 }
 
@@ -164,7 +167,9 @@ bool Application::OnRender()
     mCommandList->RSSetViewports(1, &mViewport);
     mCommandList->RSSetScissorRects(1, &mScissors);
 
-    // RenderModels();
+    mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
+
+    RenderModels();
 
     d3d->OnRenderEnd(mCommandList.Get());
 
@@ -235,10 +240,40 @@ bool Application::InitFrameResources()
     return true;
 }
 
+void Application::UpdateModels()
+{
+    for (auto &model : mModels)
+    {
+        if (model.DirtyFrames > 0)
+        {
+            auto mappedMemory = mCurrentFrameResource->PerObjectBuffers.GetMappedMemory(model.ConstantBufferIndex);
+            mappedMemory->World = model.GetWorld();
+
+            model.DirtyFrames--;
+        }
+    }
+}
+
+void Application::UpdatePassBuffers()
+{
+    using namespace DirectX;
+    XMVECTOR eyePosition = XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
+    XMVECTOR eyeDirection = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    XMVECTOR upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+    auto mappedMemory = mCurrentFrameResource->PerPassBuffers.GetMappedMemory();
+    mappedMemory->View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(eyePosition, eyeDirection, upVector));
+    mappedMemory->Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)mClientWidth / mClientHeight, 0.1f, 100.0f));
+}
+
 void Application::RenderModels()
 {
     for (unsigned int i = 0; i < mModels.size(); ++i)
     {
+        auto perObjectBufferAddress = mCurrentFrameResource->PerObjectBuffers.GetGPUVirtualAddress();
+        perObjectBufferAddress += mModels[i].ConstantBufferIndex * mCurrentFrameResource->PerObjectBuffers.GetElementSize();
+
+        mCommandList->SetGraphicsRootConstantBufferView(0, perObjectBufferAddress);
         mCommandList->DrawIndexedInstanced(mModels[i].GetIndexCount(),
                                            1, // Number of instances
                                            mModels[i].GetStartIndexLocation(),

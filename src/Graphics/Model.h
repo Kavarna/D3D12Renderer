@@ -43,6 +43,8 @@ public:
     uint32_t GetBaseVertexLocation() const;
     uint32_t GetStartIndexLocation() const;
 
+    const DirectX::XMMATRIX &__vectorcall GetWorld() const;
+
 private:
     bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
     bool ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path);

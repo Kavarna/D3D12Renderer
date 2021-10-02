@@ -30,7 +30,7 @@ extern fmt::ostream gOutputStream;
 void Init();
 
 template <typename... Args>
-void Log(LogLevel level, const char *fileName, unsigned int lineNumber, const char *functionName, const char *format, const Args&... args)
+constexpr void Log(LogLevel level, const char *fileName, unsigned int lineNumber, const char *functionName, const char *format, const Args&... args)
 {
 #ifdef COLOR_LOGS
     fmt::v8::text_style style;

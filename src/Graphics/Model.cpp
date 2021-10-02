@@ -35,6 +35,11 @@ uint32_t Model::GetStartIndexLocation() const
 	return mInfo.StartIndexLocation;
 }
 
+const DirectX::XMMATRIX &__vectorcall Model::GetWorld() const
+{
+	return mWorld;
+}
+
 bool Model::ProcessNode(aiNode *node, const aiScene *scene, const std::string &path)
 {
 	SHOWINFO("[Loading Model {}] Loading node with {} meshes and {} nodes", path, node->mNumMeshes, node->mNumChildren);
