@@ -1,9 +1,12 @@
 #pragma once
 
 
-#include "Oblivion.h"
+#include <Oblivion.h>
 #include "Model.h"
 #include "FrameResources.h"
+
+#include "Keyboard.h"
+#include "Mouse.h"
 
 class Application
 {
@@ -28,6 +31,7 @@ private:
 
 private:
     bool InitD3D();
+    bool InitInput();
     bool InitModels();
     bool InitFrameResources();
 
@@ -58,6 +62,11 @@ private:
     D3D12_RECT mScissors;
 private:
     unsigned int mClientWidth = 800, mClientHeight = 600;
+    bool mMenuActive = true;
+
+private:
+    std::unique_ptr<DirectX::Mouse> mMouse;
+    std::unique_ptr<DirectX::Keyboard> mKeyboard;
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);

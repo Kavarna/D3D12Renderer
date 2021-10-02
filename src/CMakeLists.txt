@@ -8,11 +8,13 @@ FILE(GLOB SOURCES "*.cpp" "*.h")
 FILE(GLOB COMMON "common/*.cpp" "common/*.h")
 FILE(GLOB_RECURSE CORE_SRC "Core/*.cpp" "Core/*.h")
 FILE(GLOB_RECURSE GRAPHICS_SRC "Graphics/*.cpp" "Graphics/*.h")
+FILE(GLOB_RECURSE INPUT_SRC "Input/*.cpp" "Input/*.h")
 FILE(GLOB_RECURSE SHADERS_COMMON "Shaders/*.hlsli")
 FILE(GLOB_RECURSE PIXEL_SHADERS "Shaders/Pixel*.hlsl")
 FILE(GLOB_RECURSE VERTEX_SHADERS "Shaders/Vertex*.hlsl")
 
 include_directories("Graphics")
+include_directories("Input")
 include_directories("Core")
 
 add_executable(D3D12Renderer
@@ -20,6 +22,7 @@ add_executable(D3D12Renderer
                 ${CORE_SRC}
                 ${COMMON}
                 ${GRAPHICS_SRC}
+                ${INPUT_SRC}
                 ${PIXEL_SHADERS}
                 ${VERTEX_SHADERS}
                 ${SHADERS_COMMON})
@@ -34,6 +37,7 @@ make_filters("${CORE_SRC}")
 make_filters("${COMMON}")
 make_filters("${SOURCES}")
 make_filters("${GRAPHICS_SRC}")
+make_filters("${INPUT_SRC}")
 
 set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 17)
 

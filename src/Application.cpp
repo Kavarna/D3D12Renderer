@@ -84,6 +84,7 @@ bool Application::OnInit()
     SHOWINFO("Started initializing application");
 
     CHECK(InitD3D(), false, "Unable to initialize D3D");
+    CHECK(InitInput(), false, "Unable to initialize input");
     CHECK(InitModels(), false, "Unable to load all models");
     CHECK(InitFrameResources(), false, "Unable to initialize Frame Resources");
 
@@ -135,12 +136,33 @@ bool Application::OnResize(uint32_t width, uint32_t height)
 bool Application::OnUpdate()
 {
     auto d3d = Direct3D::Get();
+    auto kb = mKeyboard->GetState();
+    auto mouse = mMouse->GetState();
     mCurrentFrameResourceIndex = (mCurrentFrameResourceIndex + 1) % Direct3D::kBufferCount;
     mCurrentFrameResource = &mFrameResources[mCurrentFrameResourceIndex];
     if (mCurrentFrameResource->FenceValue != 0 && mFence->GetCompletedValue() < mCurrentFrameResource->FenceValue)
     {
         d3d->WaitForFenceValue(mFence.Get(), mCurrentFrameResource->FenceValue);
     }
+
+    static bool bRightClick = false;
+    if (mouse.rightButton && !bRightClick)
+    {
+        bRightClick = true;
+        if (mMenuActive)
+        {
+            mMouse->SetMode(DirectX::Mouse::Mode::MODE_RELATIVE);
+            while (ShowCursor(FALSE) > 0);
+        }
+        else
+        {
+            mMouse->SetMode(DirectX::Mouse::Mode::MODE_ABSOLUTE);
+            while (ShowCursor(TRUE) <= 0);
+        }
+        mMenuActive = !mMenuActive;
+    }
+    else if (!mouse.rightButton)
+        bRightClick = false;
 
     UpdateModels();
     UpdatePassBuffers();
@@ -207,6 +229,17 @@ bool Application::InitD3D()
     auto fence = d3d->CreateFence(0);
     CHECK(fence.Valid(), false, "Unable to initialize fence with value 0");
     mFence = fence.Get();
+
+    return true;
+}
+
+bool Application::InitInput()
+{
+    mKeyboard = std::make_unique<DirectX::Keyboard>();
+    mMouse = std::make_unique<DirectX::Mouse>();
+    mMouse->SetWindow(mWindow);
+    mMouse->SetVisible(true);
+    mMouse->SetMode(DirectX::Mouse::Mode::MODE_ABSOLUTE);
 
     return true;
 }
@@ -295,6 +328,33 @@ LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
     static Application *app;
     switch (message)
     {
+        case WM_ACTIVATEAPP:
+            DirectX::Keyboard::ProcessMessage(message, wParam, lParam);
+            DirectX::Mouse::ProcessMessage(message, wParam, lParam);
+            break;
+
+        case WM_MOUSEMOVE:
+        case WM_INPUT:
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_RBUTTONDOWN:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONUP:
+        case WM_MOUSEWHEEL:
+        case WM_XBUTTONDOWN:
+        case WM_XBUTTONUP:
+        case WM_MOUSEHOVER:
+            DirectX::Mouse::ProcessMessage(message, wParam, lParam);
+            break;
+
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            DirectX::Keyboard::ProcessMessage(message, wParam, lParam);
+            break;
+
         case WM_CREATE:
         {
             CREATESTRUCT *createInfo = (CREATESTRUCT *)lParam;

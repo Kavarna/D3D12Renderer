@@ -23,10 +23,6 @@ endmacro()
 
 add_subdirectory("src")
 
-make_filters("${CORE_SRC}")
-make_filters("${COMMON}")
-make_filters("${SOURCES}")
-
 set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 17)
 
 
