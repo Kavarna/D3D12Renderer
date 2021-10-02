@@ -127,6 +127,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     simpleColorPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     simpleColorPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+    simpleColorPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 
     auto rootSignature = mRootSignatures.find(rootSignatureType);
     CHECK(!(rootSignature == mRootSignatures.end()), false,

@@ -149,7 +149,7 @@ bool Application::OnUpdate()
     auto mappedMemory = mWVPBuffer.GetMappedMemory();
     mappedMemory->World = DirectX::XMMatrixRotationZ(theta);
     mappedMemory->View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(eyePosition, eyeDirection, upVector));
-    mappedMemory->Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(XM_PIDIV4, 16.0f / 9.0f, 0.1f, 100.0f));
+    mappedMemory->Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)mClientWidth / mClientHeight, 0.1f, 100.0f));
 
     return true;
 }
