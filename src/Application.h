@@ -34,11 +34,13 @@ private:
     bool InitInput();
     bool InitModels();
     bool InitFrameResources();
+    bool InitImgui();
 
 private:
     void UpdateModels();
     void UpdatePassBuffers();
     void RenderModels();
+    void RenderGUI();
 
 private:
     HINSTANCE mInstance = nullptr;
@@ -48,6 +50,8 @@ private:
     // D3D Objects
     ComPtr<ID3D12CommandAllocator> mInitializationCommandAllocator;
     ComPtr<ID3D12GraphicsCommandList> mCommandList;
+
+    ComPtr<ID3D12DescriptorHeap> mImguiDescriptorHeap;
 
     ComPtr<ID3D12Fence> mFence;
     std::vector<Model> mModels;

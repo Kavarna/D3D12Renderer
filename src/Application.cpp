@@ -2,6 +2,13 @@
 #include "Direct3D.h"
 #include "PipelineManager.h"
 
+// Imgui stuff
+#include "Graphics/imgui/imgui.h"
+#include "Graphics/imgui/imgui_impl_win32.h"
+#include "Graphics/imgui/imgui_impl_dx12.h"
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 constexpr auto APPLICATION_NAME = TEXT("Game");
 constexpr auto ENGINE_NAME = TEXT("Oblivion");
 constexpr const char *CONFIG_FILE = "Oblivion.ini";
@@ -87,6 +94,7 @@ bool Application::OnInit()
     CHECK(InitInput(), false, "Unable to initialize input");
     CHECK(InitModels(), false, "Unable to load all models");
     CHECK(InitFrameResources(), false, "Unable to initialize Frame Resources");
+    CHECK(InitImgui(), false, "Unable to initialize imgui");
 
     SHOWINFO("Finished initializing application");
     return true;
@@ -102,6 +110,10 @@ void Application::OnDestroy()
 
     Model::Destroy();
     PipelineManager::Destroy();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 
     Direct3D::Destroy();
     SHOWINFO("Finished destroying application");
@@ -195,6 +207,7 @@ bool Application::OnRender()
     mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
 
     RenderModels();
+    RenderGUI();
 
     d3d->OnRenderEnd(mCommandList.Get());
 
@@ -281,6 +294,27 @@ bool Application::InitFrameResources()
     return true;
 }
 
+bool Application::InitImgui()
+{
+    auto d3d = Direct3D::Get();
+
+    auto descriptorHeap = d3d->CreateDescriptorHeap(1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+    CHECK(descriptorHeap.Valid(), false, "Unable to initialize imgui descriptor heap");
+    mImguiDescriptorHeap = descriptorHeap.Get();;
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.IniFilename = nullptr;
+    ImGui::StyleColorsDark();
+    ImGui_ImplWin32_Init(mWindow);
+    ImGui_ImplDX12_Init(d3d->GetD3D12Device().Get(), Direct3D::kBufferCount,
+                        Direct3D::kBackbufferFormat, mImguiDescriptorHeap.Get(),
+                        mImguiDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+                        mImguiDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    return true;
+}
+
 void Application::UpdateModels()
 {
     for (auto &model : mModels)
@@ -323,9 +357,29 @@ void Application::RenderModels()
     }
 }
 
+void Application::RenderGUI()
+{
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowPos(ImVec2(-1, -1));
+    ImGui::Begin("Debug info", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    ImGui::Text("Frametime: %f (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::End();
+
+    ImGui::Render();
+    mCommandList->SetDescriptorHeaps(1, mImguiDescriptorHeap.GetAddressOf());
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), mCommandList.Get());
+}
+
 LRESULT Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     static Application *app;
+
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
+        return true;
+
     switch (message)
     {
         case WM_ACTIVATEAPP:
