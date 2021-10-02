@@ -89,7 +89,12 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	{
 		Vertex currentVertex;
 		currentVertex.Position = { mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z };
-		currentVertex.Color = { 1.0f, 1.0f, 0.0f, 1.0f }; // Default good enough color
+		// currentVertex.Color = { 1.0f, 1.0f, 0.0f, 1.0f }; // Default good enough color
+		XMVECTOR positionVector = XMLoadFloat3(&currentVertex.Position);
+		positionVector = XMVector3Normalize(positionVector);
+		positionVector = XMVectorSetW(positionVector, 1.0f);
+		positionVector = XMVectorAbs(positionVector);
+		XMStoreFloat4(&currentVertex.Color, positionVector);
 
 		vertices.push_back(std::move(currentVertex));
 	}

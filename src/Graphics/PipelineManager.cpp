@@ -117,7 +117,8 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.CachedPSO.pCachedBlob = nullptr;
     simpleColorPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
     simpleColorPipeline.DepthStencilState.StencilEnable = FALSE;
-    simpleColorPipeline.DepthStencilState.DepthEnable = FALSE;
+    simpleColorPipeline.DepthStencilState.DepthEnable = TRUE;
+    simpleColorPipeline.DSVFormat = Direct3D::kDepthStencilFormat;
     simpleColorPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
     simpleColorPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
     simpleColorPipeline.NumRenderTargets = 1;
@@ -127,7 +128,6 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     simpleColorPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     simpleColorPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
-    simpleColorPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 
     auto rootSignature = mRootSignatures.find(rootSignatureType);
     CHECK(!(rootSignature == mRootSignatures.end()), false,
