@@ -20,12 +20,15 @@ public:
 
         mElementCount = elementCount;
         mElementSize = sizeof(T);
-        mTotalSize = mElementSize * mElementCount;
 
         if (isConstantBuffer)
         {
-            mTotalSize = Math::AlignUp(mTotalSize, 256);
+            mElementSize = Math::AlignUp(mElementSize, 256);
         }
+
+        mTotalSize = mElementSize * mElementCount;
+
+
 
         auto uploadHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mTotalSize);

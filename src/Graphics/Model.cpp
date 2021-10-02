@@ -77,6 +77,7 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 				(mesh->mNumFaces * 3) == renderParameters.IndexCount)
 			{
 				SHOWINFO("[Loading Model {}] Mesh {} loaded once, using that version", path, meshName);
+				mInfo = mModelsRenderParameters[meshName];
 				return true;
 			}
 			else

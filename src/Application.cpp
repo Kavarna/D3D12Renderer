@@ -145,6 +145,9 @@ bool Application::OnUpdate()
     UpdateModels();
     UpdatePassBuffers();
 
+    mModels[0].RotateY(0.01f);
+    mModels[1].RotateY(-0.01f);
+
     return true;
 }
 
@@ -216,6 +219,11 @@ bool Application::InitModels()
     auto d3d = Direct3D::Get();
     mModels.emplace_back(Direct3D::kBufferCount, 0);
     CHECK(mModels.back().Create("Resources\\Suzanne.obj"), false, "Unable to load Suzanne");
+    mModels.back().Translate(2.0f, 0.0f, 0.0f);
+
+    mModels.emplace_back(Direct3D::kBufferCount, 1);
+    CHECK(mModels.back().Create("Resources\\Suzanne.obj"), false, "Unable to load Suzanne");
+    mModels.back().Translate(-2.0f, 0.0f, 0.0f);
 
     ComPtr<ID3D12Resource> intermediaryResources[2];
     CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");
@@ -247,7 +255,7 @@ void Application::UpdateModels()
         if (model.DirtyFrames > 0)
         {
             auto mappedMemory = mCurrentFrameResource->PerObjectBuffers.GetMappedMemory(model.ConstantBufferIndex);
-            mappedMemory->World = model.GetWorld();
+            mappedMemory->World = DirectX::XMMatrixTranspose(model.GetWorld());
 
             model.DirtyFrames--;
         }
