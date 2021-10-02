@@ -8,6 +8,7 @@
 #include <fmt/os.h>
 #include <fmt/color.h>
 
+#include "TypeOutput.h"
 
 
 namespace Logger
