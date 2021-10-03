@@ -140,8 +140,7 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mScissors.right = mClientWidth;
     mScissors.bottom = mClientWidth;
 
-    mCamera.Create(mCamera.GetPosition(), mCamera.GetDirection(), mCamera.GetRightDirection(),
-                   (float)mClientWidth / mClientHeight);
+    mCamera.Create(mCamera.GetPosition(), (float)mClientWidth / mClientHeight);
 
     d3d->OnResize(width, height);
 
@@ -262,8 +261,7 @@ bool Application::InitModels()
     CHECK_HR(mCommandList->Close(), false);
     d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
 
-    mCamera.Create({ 0.0f, 0.0f, -3.0f }, { 0.0f, 0.0f, +1.0f }, { 1.0f, 0.0f, 0.0f },
-                   (float)mClientWidth / mClientHeight);
+    mCamera.Create({ 0.0f, 0.0f, -3.0f }, (float)mClientWidth / mClientHeight);
 
     return true;
 }

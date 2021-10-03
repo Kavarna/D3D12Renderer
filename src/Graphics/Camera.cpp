@@ -1,13 +1,12 @@
 #include "Camera.h"
 
-void Camera::Create(const DirectX::XMFLOAT3 &position, const DirectX::XMFLOAT3 &direction, const DirectX::XMFLOAT3 &rightDirection,
-                    float aspectRatio, float FOV, float nearZ, float farZ, float yaw, float pitch)
+void Camera::Create(const DirectX::XMFLOAT3 &position, float aspectRatio, float FOV, float nearZ, float farZ, float yaw, float pitch)
 {
     MarkUpdate();
 
     mPosition = DirectX::XMLoadFloat3(&position);
-    mForwadDirection = DirectX::XMLoadFloat3(&direction);
-    mRightDirection = DirectX::XMLoadFloat3(&rightDirection);
+    mForwadDirection = mForwardVector;
+    mRightDirection = mRightVector;
     mUpDirection = DirectX::XMVector3Cross(mForwadDirection, mRightDirection);
 
     mAspectRatio = aspectRatio;
@@ -31,18 +30,16 @@ void Camera::Update(float dt, float mouseHorizontalMove, float mouseVerticalMove
     }
 
     DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(mPitch, mYaw, 0.0f);
-    mForwadDirection = DirectX::XMVector3TransformCoord(mForwadDirection, rotationMatrix);
+    mForwadDirection = DirectX::XMVector3TransformCoord(mForwardVector, rotationMatrix);
     mForwadDirection = DirectX::XMVector3Normalize(mForwadDirection);
 
-    mRightDirection = DirectX::XMVector3TransformCoord(mRightDirection, rotationMatrix);
+    mRightDirection = DirectX::XMVector3TransformCoord(mRightVector, rotationMatrix);
     mRightDirection = DirectX::XMVector3Normalize(mRightDirection);
 
     mUpDirection = DirectX::XMVector3Cross(mForwadDirection, mRightDirection);
 
     mViewMatrix = DirectX::XMMatrixLookToLH(mPosition, mForwadDirection, mUpDirection);
     
-    mYaw = 0.0f;
-    mPitch = 0.0f;
 }
 
 const DirectX::XMMATRIX &__vectorcall Camera::GetView() const

@@ -13,8 +13,8 @@ public:
     Camera() = default;
 
 public:
-    void Create(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction, const DirectX::XMFLOAT3& rightDirection,
-                float aspectRatio, float FOV = DirectX::XM_PIDIV4, float nearZ = 0.1f, float farZ = 1000.f,
+    void Create(const DirectX::XMFLOAT3& position, float aspectRatio,
+                float FOV = DirectX::XM_PIDIV4, float nearZ = 0.1f, float farZ = 1000.f,
                 float yaw = 0.0f, float pitch = 0.0f);
 
 
@@ -35,6 +35,11 @@ public:
     void MoveLeft(float dt);
 
 private:
+    DirectX::XMVECTOR mForwardVector = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    DirectX::XMVECTOR mRightVector = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+    DirectX::XMVECTOR mUpVector = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+
+
     DirectX::XMVECTOR mPosition;
     DirectX::XMVECTOR mForwadDirection;
     DirectX::XMVECTOR mUpDirection;
