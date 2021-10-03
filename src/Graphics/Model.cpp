@@ -40,6 +40,52 @@ const DirectX::XMMATRIX &__vectorcall Model::GetWorld() const
 	return mWorld;
 }
 
+const DirectX::XMMATRIX &__vectorcall Model::GetTexWorld() const
+{
+	return mTexWorld;
+}
+
+void Model::Identity()
+{
+	mWorld = DirectX::XMMatrixIdentity();
+	MarkUpdate();
+}
+
+void Model::Translate(float x, float y, float z)
+{
+	mWorld *= DirectX::XMMatrixTranslation(x, y, z);
+	MarkUpdate();
+}
+
+void Model::RotateX(float theta)
+{
+	mWorld = DirectX::XMMatrixRotationX(theta) * mWorld;
+	MarkUpdate();
+}
+
+void Model::RotateY(float theta)
+{
+	mWorld = DirectX::XMMatrixRotationY(theta) * mWorld;
+	MarkUpdate();
+}
+
+void Model::RotateZ(float theta)
+{
+	mWorld = DirectX::XMMatrixRotationZ(theta) * mWorld;
+	MarkUpdate();
+}
+
+void Model::Scale(float scaleFactor)
+{
+	Scale(scaleFactor, scaleFactor, scaleFactor);
+}
+
+void Model::Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ)
+{
+	mWorld = DirectX::XMMatrixScaling(scaleFactorX, scaleFactorY, scaleFactorZ) * mWorld;
+	MarkUpdate();
+}
+
 bool Model::ProcessNode(aiNode *node, const aiScene *scene, const std::string &path)
 {
 	SHOWINFO("[Loading Model {}] Loading node with {} meshes and {} nodes", path, node->mNumMeshes, node->mNumChildren);

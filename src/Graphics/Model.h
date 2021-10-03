@@ -44,60 +44,19 @@ public:
     uint32_t GetStartIndexLocation() const;
 
     const DirectX::XMMATRIX &__vectorcall GetWorld() const;
+    const DirectX::XMMATRIX &__vectorcall GetTexWorld() const;
 
-    void Identity()
-    {
-        mWorld = DirectX::XMMatrixIdentity();
-        MarkUpdate();
-    }
-
-    void Translate(float x, float y, float z)
-    {
-        mWorld *= DirectX::XMMatrixTranslation(x, y, z);
-        MarkUpdate();
-    }
-
-    void RotateX(float theta)
-    {
-        mWorld = DirectX::XMMatrixRotationX(theta) * mWorld;
-        MarkUpdate();
-    }
-
-    void RotateY(float theta)
-    {
-        mWorld = DirectX::XMMatrixRotationY(theta) * mWorld;
-        MarkUpdate();
-    }
-
-    void RotateZ(float theta)
-    {
-        mWorld = DirectX::XMMatrixRotationZ(theta) * mWorld;
-        MarkUpdate();
-    }
-
-    void Scale(float scaleFactor)
-    {
-        Scale(scaleFactor, scaleFactor, scaleFactor);
-    }
-
-    void Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ)
-    {
-        mWorld = DirectX::XMMatrixScaling(scaleFactorX, scaleFactorY, scaleFactorZ) * mWorld;
-        MarkUpdate();
-    }
+    void Identity();
+    void Translate(float x, float y, float z);
+    void RotateX(float theta);
+    void RotateY(float theta);
+    void RotateZ(float theta);
+    void Scale(float scaleFactor);
+    void Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ);
 
 private:
     bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
     bool ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path);
-
-private:
-    struct ModelInfo
-    {
-        uint32_t mVertexCount;
-        uint32_t mIndexCount;
-        uint32_t mBaseVertexLocation;
-        uint32_t mStartIndexLocation;
-    };
 
 private:
     static std::vector<Vertex> mVertices;
@@ -125,5 +84,6 @@ private:
 
 private:
     DirectX::XMMATRIX mWorld;
+    DirectX::XMMATRIX mTexWorld;
     RenderParameters mInfo;
 };

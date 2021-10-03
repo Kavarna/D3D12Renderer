@@ -24,6 +24,11 @@ public:
         DirtyFrames = mMaxDirtyFrames;
     }
 
+    unsigned int GetMaxDirtyFrames() const
+    {
+        return mMaxDirtyFrames;
+    }
+
 public:
     unsigned int DirtyFrames;
     unsigned int ConstantBufferIndex;
