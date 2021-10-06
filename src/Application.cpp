@@ -252,7 +252,7 @@ bool Application::InitModels()
     mModels.back().Translate(2.0f, 0.0f, 0.0f);
 
     mModels.emplace_back(Direct3D::kBufferCount, 1);
-    CHECK(mModels.back().Create("Resources\\Suzanne.obj"), false, "Unable to load Suzanne");
+    CHECK(mModels.back().Create("Resources\\Cube.obj"), false, "Unable to load Cube");
     mModels.back().Translate(-2.0f, 0.0f, 0.0f);
 
     ComPtr<ID3D12Resource> intermediaryResources[2];

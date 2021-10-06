@@ -5,10 +5,12 @@
 #include "Oblivion.h"
 #include "Vertex.h"
 #include "Utils/UpdateObject.h"
+#include "MaterialManager.h"
 
 #include <assimp\Importer.hpp>
 #include <assimp\scene.h>
 #include <assimp\postprocess.h>
+#include <assimp\mesh.h>
 
 class Model : public UpdateObject
 {
@@ -57,6 +59,7 @@ public:
 private:
     bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
     bool ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path);
+    Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh* mesh, const aiScene* scene);
 
 private:
     static std::vector<Vertex> mVertices;
@@ -86,4 +89,6 @@ private:
     DirectX::XMMATRIX mWorld;
     DirectX::XMMATRIX mTexWorld;
     RenderParameters mInfo;
+    MaterialManager::Material *mMaterial;
+
 };

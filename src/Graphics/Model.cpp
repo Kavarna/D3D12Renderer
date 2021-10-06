@@ -2,6 +2,7 @@
 #include "Utils/Utils.h"
 #include "Direct3D.h"
 
+
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
 
@@ -135,6 +136,12 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 			break;
 	} while (true);
 
+	auto materialInfoResult = ProcessMaterialFromMesh(mesh, scene);
+	CHECK(materialInfoResult.Valid(), false, "[Loading Model {}] Cannot get material from mesh {}", path, meshName);
+	auto materialInfo = materialInfoResult.Get();
+	mMaterial = MaterialManager::Get()->AddMaterial(
+		GetMaxDirtyFrames(), std::get<0>(materialInfo), std::get<1>(materialInfo));
+
 	std::vector<Vertex> vertices;
 	vertices.reserve(mesh->mNumVertices);
 	for (uint32_t i = 0; i < mesh->mNumVertices; ++i)
@@ -155,7 +162,7 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	indices.reserve(mesh->mNumFaces * 3);
 	for (uint32_t i = 0; i < mesh->mNumFaces; ++i)
 	{
-		CHECK((mesh->mFaces[i].mNumIndices == 3), false,
+		CHECK(mesh->mFaces[i].mNumIndices == 3, false,
 			  "[Loading Model {}] In mesh {} found at face found invalid number of indices: expected 3, but found {}",
 			  path, meshName, mesh->mFaces[i].mNumIndices);
 
@@ -179,6 +186,43 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 
 	mInfo = mModelsRenderParameters[meshName];
 	return true;
+}
+
+Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMesh(const aiMesh *mesh, const aiScene *scene)
+{
+	CHECK(mesh->mMaterialIndex < scene->mNumMaterials, std::nullopt,
+		  "Invalid material index {}. It should be less than {}",
+		  mesh->mMaterialIndex, scene->mNumMaterials);
+	auto currentMaterial = scene->mMaterials[mesh->mMaterialIndex];
+	std::string materialName = currentMaterial->GetName().C_Str();
+	MaterialConstants materialInfo = {};
+	aiColor3D diffuseColor, fresnel;
+	float shininess;
+	if (currentMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor) != aiReturn::aiReturn_SUCCESS)
+	{
+		diffuseColor = { 0.0f, 0.0f, 0.0f };
+		SHOWWARNING("Unable get diffuse color for material {}. Using black as default", materialName);
+	}
+	if (currentMaterial->Get(AI_MATKEY_SHININESS, shininess) != aiReturn::aiReturn_SUCCESS)
+	{
+		shininess = 0.0f;
+		SHOWWARNING("Unable get shininess for material {}. Using default 0", materialName);
+	}
+	// Assimp cannot handle fresnel parameters, so we'll use specular color insted
+	if (currentMaterial->Get(AI_MATKEY_COLOR_SPECULAR, fresnel) != aiReturn::aiReturn_SUCCESS)
+	{
+		fresnel = { 0.25f, 0.25f, 0.25f };
+		SHOWWARNING("Unable get specular color for material {}. Using default { 0.25, 0.25, 0.25 }", materialName);
+	}
+
+	materialInfo.DiffuseAlbedo = { diffuseColor.r, diffuseColor.g, diffuseColor.b, 1.0f };
+	materialInfo.MaterialTransform = DirectX::XMMatrixIdentity();
+	materialInfo.Shininess = shininess / 1000.f;
+	materialInfo.FresnelR0 = { fresnel.r, fresnel.g, fresnel.b };
+	materialInfo.textureIndex = -1; // TODO: update this
+
+	std::tuple<std::string, MaterialConstants> result = { materialName, materialInfo };
+	return result;
 }
 
 Model::Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex) : 
