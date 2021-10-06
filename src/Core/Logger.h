@@ -110,41 +110,41 @@ Log(Logger::LogLevel::FATAL, fileName, __LINE__, functionName, format, __VA_ARGS
 }
 
 #define CHECK(cond, retValue, format, ...) {\
-if (!cond) {\
+if (!(cond)) {\
 SHOWFATAL(format, __VA_ARGS__);\
 return (retValue);\
 }\
 }
 
 #define CHECKSIMPLE(cond) {\
-if (!cond) {\
+if (!(cond)) {\
 return false;\
 }\
 }
 
 #define CHECKRET(cond, format, ...) {\
-if (!cond) {\
+if (!(cond)) {\
 SHOWFATAL(format, __VA_ARGS__);\
 return;\
 }\
 }
 
 #define CHECKCONT(cond, format, ...) {\
-if (!cond) {\
+if (!(cond)) {\
 SHOWFATAL(format, __VA_ARGS__);\
 continue;\
 }\
 }
 
 #define CHECKBK(cond, format, ...) {\
-if (!cond) {\
+if (!(cond)) {\
 SHOWFATAL(format, __VA_ARGS__);\
 break;\
 }\
 }
 
 #define CHECKSHOW(cond, format, ...) {\
-if (!cond) {\
+if (!(cond)) {\
 SHOWFATAL(format, __VA_ARGS__);\
 }\
 }
