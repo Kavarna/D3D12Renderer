@@ -30,7 +30,7 @@ public:
 
 public:
     Material *AddMaterial(unsigned int maxDirtyFrames, const std::string &materialName, const MaterialConstants &);
-    void UpdateMaterials(UploadBuffer<MaterialConstants> &materialsBuffer);
+    void UpdateMaterialsBuffer(UploadBuffer<MaterialConstants> &materialsBuffer);
     
     uint32_t GetNumMaterials() const;
     void CloseAddingMaterials();

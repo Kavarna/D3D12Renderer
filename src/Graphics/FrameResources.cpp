@@ -19,6 +19,8 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
     CHECK(MaterialsBuffers.Init(numMaterials, true), false,
           "Unable to initialize material buffer with {} elements", numMaterials);
 
+    CHECK(LightsBuffer.Init(1, true), false,
+          "Unable to initialize lights buffer with {} elements", 1);
 
     return true;
 }

@@ -15,7 +15,7 @@ MaterialManager::Material *MaterialManager::AddMaterial(unsigned int maxDirtyFra
     return AddMaterial(maxDirtyFrames, materialName, info);
 }
 
-void MaterialManager::UpdateMaterials(UploadBuffer<MaterialConstants> &materialsBuffer)
+void MaterialManager::UpdateMaterialsBuffer(UploadBuffer<MaterialConstants> &materialsBuffer)
 {
     for (auto &it : mMaterials)
     {

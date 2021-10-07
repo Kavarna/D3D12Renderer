@@ -16,7 +16,7 @@ struct PerPassInfo
     DirectX::XMMATRIX Projection;
 };
 
-#define MAX_LIGHTS 15
+#define MAX_LIGHTS 10
 
 struct LightCB
 {
@@ -62,7 +62,7 @@ struct FrameResources
     UploadBuffer<PerObjectInfo> PerObjectBuffers;
     UploadBuffer<PerPassInfo> PerPassBuffers;
     UploadBuffer<MaterialConstants> MaterialsBuffers;
-    
+    UploadBuffer<LightsBuffer> LightsBuffer;
 
     uint64_t FenceValue = 0;
 };

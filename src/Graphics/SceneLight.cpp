@@ -1,7 +1,7 @@
 #include "SceneLight.h"
 
-SceneLight::SceneLight(unsigned int maxDirtyFrames, unsigned int constantBufferIndex):
-    UpdateObject(maxDirtyFrames, constantBufferIndex)
+SceneLight::SceneLight(unsigned int maxDirtyFrames):
+    UpdateObject(maxDirtyFrames, 0)
 {
 }
 
@@ -197,6 +197,15 @@ void SceneLight::DeleteSpotlight(int index)
 DirectX::XMFLOAT4 &SceneLight::GetAmbientColor()
 {
     return mAmbientColor;
+}
+
+void SceneLight::UpdateLightsBuffer(UploadBuffer<LightsBuffer> &buffer)
+{
+    if (DirtyFrames)
+    {
+        UpdateLightsBuffer(buffer.GetMappedMemory());
+        DirtyFrames--;
+    }
 }
 
 void SceneLight::UpdateLightsBuffer(LightsBuffer *lb) const

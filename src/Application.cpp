@@ -14,6 +14,11 @@ constexpr auto ENGINE_NAME = TEXT("Oblivion");
 constexpr const char *CONFIG_FILE = "Oblivion.ini";
 
 
+Application::Application() : 
+    mSceneLight((unsigned int)mFrameResources.size())
+{
+}
+
 bool Application::Init(HINSTANCE hInstance)
 {
     SHOWINFO("Started initializing application. Version = {}", VERSION);
@@ -97,6 +102,9 @@ bool Application::OnInit()
     CHECK(InitFrameResources(), false, "Unable to initialize Frame Resources");
     CHECK(InitImgui(), false, "Unable to initialize imgui");
 
+    mSceneLight.SetAmbientColor(0.2f, 0.2f, 0.2f, 1.0f);
+    mSceneLight.AddPointLight("MyPointLight", { 0.0f, 5.0f, 0.0f }, { 0.8f, 0.0f, 0.0f }, 1.0f, 30.0f);
+
     SHOWINFO("Finished initializing application");
     return true;
 }
@@ -163,7 +171,8 @@ bool Application::OnUpdate()
     ReactToKeyPresses(dt);
     UpdateModels();
     UpdatePassBuffers();
-    MaterialManager::Get()->UpdateMaterials(mCurrentFrameResource->MaterialsBuffers);
+    MaterialManager::Get()->UpdateMaterialsBuffer(mCurrentFrameResource->MaterialsBuffers);
+    mSceneLight.UpdateLightsBuffer(mCurrentFrameResource->LightsBuffer);
 
     mModels[0].RotateY(0.01f);
     mModels[1].RotateY(-0.01f);
@@ -390,6 +399,7 @@ void Application::UpdatePassBuffers()
 void Application::RenderModels()
 {
     mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
+    mCommandList->SetGraphicsRootConstantBufferView(3, mCurrentFrameResource->LightsBuffer.GetGPUVirtualAddress());
 
     for (unsigned int i = 0; i < mModels.size(); ++i)
     {

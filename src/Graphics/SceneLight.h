@@ -8,7 +8,7 @@
 class SceneLight : public UpdateObject
 {
 public:
-    SceneLight(unsigned int maxDirtyFrames, unsigned int constantBufferIndex);
+    SceneLight(unsigned int maxDirtyFrames);
 
 public:
     void SetAmbientColor(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 0.0f);
@@ -39,6 +39,7 @@ public:
 
     DirectX::XMFLOAT4 &GetAmbientColor();
 
+    void UpdateLightsBuffer(UploadBuffer<LightsBuffer> &buffer);
     void UpdateLightsBuffer(LightsBuffer *lb) const;
 
 private:

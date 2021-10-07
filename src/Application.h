@@ -5,6 +5,7 @@
 #include "Model.h"
 #include "FrameResources.h"
 #include "Camera.h"
+#include "SceneLight.h"
 
 #include "Keyboard.h"
 #include "Mouse.h"
@@ -13,7 +14,7 @@ class Application
 {
     static constexpr const auto kMINIMUM_WINDOW_SIZE = 200;
 public:
-    Application() = default;
+    Application();
     ~Application() = default;
 
 public:
@@ -63,6 +64,8 @@ private:
     std::array<FrameResources, Direct3D::kBufferCount> mFrameResources;
     FrameResources *mCurrentFrameResource;
     uint32_t mCurrentFrameResourceIndex = 0;
+
+    SceneLight mSceneLight;
 
     uint64_t mCurrentFrame = 0;
 
