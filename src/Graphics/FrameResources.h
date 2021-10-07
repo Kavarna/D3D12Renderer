@@ -55,12 +55,13 @@ struct FrameResources
     FrameResources() = default;
     ~FrameResources() = default;
 
-    bool Init(uint32_t numObjects, uint32_t numPasses);
+    bool Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials);
 
     ComPtr<ID3D12CommandAllocator> CommandAllocator;
 
     UploadBuffer<PerObjectInfo> PerObjectBuffers;
     UploadBuffer<PerPassInfo> PerPassBuffers;
+    UploadBuffer<MaterialConstants> MaterialsBuffers;
     
 
     uint64_t FenceValue = 0;

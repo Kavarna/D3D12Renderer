@@ -12,6 +12,7 @@ class MaterialManager : public ISingletone<MaterialManager>
 public:
     struct Material : public UpdateObject
     {
+        friend class MaterialManager;
         Material(unsigned int maxDirtyFrames, unsigned int cbIndex,
                  std::string materialName, const MaterialConstants &info):
             UpdateObject(maxDirtyFrames, cbIndex), Name(materialName), Info(info)
@@ -29,8 +30,13 @@ public:
 
 public:
     Material *AddMaterial(unsigned int maxDirtyFrames, const std::string &materialName, const MaterialConstants &);
+    void UpdateMaterials(UploadBuffer<MaterialConstants> &materialsBuffer);
+    
+    uint32_t GetNumMaterials() const;
+    void CloseAddingMaterials();
 
 public:
+    bool mCanAddMaterial = true;
     std::unordered_map<std::string, Material> mMaterials;
 
 };

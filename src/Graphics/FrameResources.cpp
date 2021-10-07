@@ -2,7 +2,7 @@
 
 #include "Direct3D.h"
 
-bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses)
+bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials)
 {
     auto d3d = Direct3D::Get();
 
@@ -15,6 +15,9 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses)
 
     CHECK(PerPassBuffers.Init(numPasses, true), false,
           "Unable to initialize per pass buffer with {} elements", numPasses);
+
+    CHECK(MaterialsBuffers.Init(numMaterials, true), false,
+          "Unable to initialize material buffer with {} elements", numMaterials);
 
 
     return true;

@@ -7,26 +7,25 @@
 
 enum class PipelineType
 {
-    SimpleColor = 0
+    SimpleColor = 0, MaterialLight
 };
 static constexpr const char *PipelineTypeString[] =
 {
-    "SimpleColor"
+    "SimpleColor", "MaterialLight"
 };
 
 enum class RootSignatureType
 {
-    Empty = 0, SimpleColor
+    Empty = 0, SimpleColor, ObjectFrameMaterial
 };
 static constexpr const char *RootSignatureTypeString[] =
 {
-    "Empty", "SimpleColor"
+    "Empty", "SimpleColor", "ObjectFrameMaterial"
 };
 
 class PipelineManager : public ISingletone<PipelineManager>
 {
     MAKE_SINGLETONE_CAPABLE(PipelineManager);
-    using Vertex = PositionColorVertex;
 private:
     PipelineManager() = default;
     ~PipelineManager() = default;
@@ -44,9 +43,11 @@ private:
 private:
     bool InitEmptyRootSignature();
     bool InitSimpleColorRootSignature();
+    bool InitObjectFrameMaterialRootSignature();
 
 private:
     bool InitSimpleColorPipeline();
+    bool InitMaterialLightPipeline();
 
 private:
     bool mCreated = false;

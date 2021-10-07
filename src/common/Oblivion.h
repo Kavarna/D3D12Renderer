@@ -66,6 +66,9 @@ using Microsoft::WRL::ComPtr;
 using Random = effolkronium::random_static;
 
 
+constexpr auto VERSION = "0.0.0.0";
+
+
 #define _KiB(x) (x * 1024)
 #define _MiB(x) (x * 1024 * 1024)
 

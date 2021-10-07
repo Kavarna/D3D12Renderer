@@ -16,6 +16,7 @@ constexpr const char *CONFIG_FILE = "Oblivion.ini";
 
 bool Application::Init(HINSTANCE hInstance)
 {
+    SHOWINFO("Started initializing application. Version = {}", VERSION);
     mInstance = hInstance;
     CHECK(InitWindow(), false, "Unable to initialize window");
     return true;
@@ -162,6 +163,7 @@ bool Application::OnUpdate()
     ReactToKeyPresses(dt);
     UpdateModels();
     UpdatePassBuffers();
+    MaterialManager::Get()->UpdateMaterials(mCurrentFrameResource->MaterialsBuffers);
 
     mModels[0].RotateY(0.01f);
     mModels[1].RotateY(-0.01f);
@@ -173,7 +175,7 @@ bool Application::OnRender()
 {
     auto d3d = Direct3D::Get();
 
-    auto pipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::SimpleColor);
+    auto pipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::MaterialLight);
     CHECK(pipelineResult.Valid(), false, "Unable to retrieve pipeline and root signature");
     auto [pipeline, rootSignature] = pipelineResult.Get();
 
@@ -187,8 +189,6 @@ bool Application::OnRender()
 
     mCommandList->RSSetViewports(1, &mViewport);
     mCommandList->RSSetScissorRects(1, &mScissors);
-
-    mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
 
     RenderModels();
     RenderGUI();
@@ -268,12 +268,14 @@ bool Application::InitModels()
 
 bool Application::InitFrameResources()
 {
+    MaterialManager::Get()->CloseAddingMaterials();
     uint32_t numModels = (uint32_t)mModels.size();
     uint32_t numPasses = 1;
+    uint32_t numMaterials = MaterialManager::Get()->GetNumMaterials();
 
     for (unsigned int i = 0; i < mFrameResources.size(); ++i)
     {
-        CHECK(mFrameResources[i].Init(numModels, numPasses), false, "Unable to init frame resource at index {}", i);
+        CHECK(mFrameResources[i].Init(numModels, numPasses, numMaterials), false, "Unable to init frame resource at index {}", i);
     }
     
 
@@ -387,12 +389,19 @@ void Application::UpdatePassBuffers()
 
 void Application::RenderModels()
 {
+    mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
+
     for (unsigned int i = 0; i < mModels.size(); ++i)
     {
         auto perObjectBufferAddress = mCurrentFrameResource->PerObjectBuffers.GetGPUVirtualAddress();
         perObjectBufferAddress += mModels[i].ConstantBufferIndex * mCurrentFrameResource->PerObjectBuffers.GetElementSize();
-
         mCommandList->SetGraphicsRootConstantBufferView(0, perObjectBufferAddress);
+
+        auto materialBufferAddress = mCurrentFrameResource->MaterialsBuffers.GetGPUVirtualAddress();
+        const auto* objectMaterial = mModels[i].GetMaterial();
+        materialBufferAddress += objectMaterial->ConstantBufferIndex * mCurrentFrameResource->MaterialsBuffers.GetElementSize();
+        mCommandList->SetGraphicsRootConstantBufferView(2, materialBufferAddress);
+
         mCommandList->DrawIndexedInstanced(mModels[i].GetIndexCount(),
                                            1, // Number of instances
                                            mModels[i].GetStartIndexLocation(),

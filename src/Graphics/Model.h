@@ -14,7 +14,7 @@
 
 class Model : public UpdateObject
 {
-    using Vertex = PositionColorVertex;
+    using Vertex = PositionNormalTexCoordVertex;
 public:
     enum class ModelType
     {
@@ -44,6 +44,8 @@ public:
     uint32_t GetVertexCount() const;
     uint32_t GetBaseVertexLocation() const;
     uint32_t GetStartIndexLocation() const;
+
+    MaterialManager::Material const *GetMaterial() const;
 
     const DirectX::XMMATRIX &__vectorcall GetWorld() const;
     const DirectX::XMMATRIX &__vectorcall GetTexWorld() const;

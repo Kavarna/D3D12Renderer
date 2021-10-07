@@ -36,6 +36,11 @@ uint32_t Model::GetStartIndexLocation() const
 	return mInfo.StartIndexLocation;
 }
 
+MaterialManager::Material const *Model::GetMaterial() const
+{
+	return mMaterial;
+}
+
 const DirectX::XMMATRIX &__vectorcall Model::GetWorld() const
 {
 	return mWorld;
@@ -110,8 +115,11 @@ bool Model::ProcessNode(aiNode *node, const aiScene *scene, const std::string &p
 bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path)
 {
 	auto mesh = scene->mMeshes[meshId];
-
 	std::string meshName = mesh->mName.C_Str();
+
+	CHECK(mesh->HasTextureCoords(0), false, "[Loading Model {}] Mesh {} doesn't have texture coordinates", path, meshName);
+	CHECK(mesh->HasNormals(), false, "[Loading Model {}] Mesh {} doesn't have normals", path, meshName);
+
 	unsigned int index = 0;
 	do
 	{
@@ -138,9 +146,10 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 
 	auto materialInfoResult = ProcessMaterialFromMesh(mesh, scene);
 	CHECK(materialInfoResult.Valid(), false, "[Loading Model {}] Cannot get material from mesh {}", path, meshName);
-	auto materialInfo = materialInfoResult.Get();
+	auto [materialName, materialInfo] = materialInfoResult.Get();
 	mMaterial = MaterialManager::Get()->AddMaterial(
-		GetMaxDirtyFrames(), std::get<0>(materialInfo), std::get<1>(materialInfo));
+		GetMaxDirtyFrames(), materialName, materialInfo);
+	CHECK(mMaterial != nullptr, false, "[Loading Model {}] Cannot add material {} to material manager ", path, materialName);
 
 	std::vector<Vertex> vertices;
 	vertices.reserve(mesh->mNumVertices);
@@ -148,12 +157,8 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	{
 		Vertex currentVertex;
 		currentVertex.Position = { mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z };
-		// currentVertex.Color = { 1.0f, 1.0f, 0.0f, 1.0f }; // Default good enough color
-		XMVECTOR positionVector = XMLoadFloat3(&currentVertex.Position);
-		positionVector = XMVector3Normalize(positionVector);
-		positionVector = XMVectorSetW(positionVector, 1.0f);
-		positionVector = XMVectorAbs(positionVector);
-		XMStoreFloat4(&currentVertex.Color, positionVector);
+		currentVertex.Normal = { mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z };
+		currentVertex.TexCoord = { mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y };
 
 		vertices.push_back(std::move(currentVertex));
 	}
@@ -309,9 +314,9 @@ bool Model::CreateTriangle()
 	}
 
 	Vertex vertices[] = {
-		Vertex(XMFLOAT3( 0.0f,  1.0f, 0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)),
-		Vertex(XMFLOAT3(+1.0f, -1.0f, 0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)),
-		Vertex(XMFLOAT3(-1.0f, -1.0f, 0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)),
+		Vertex(XMFLOAT3( 0.0f,  1.0f, 0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.5f, 0.0f)),
+		Vertex(XMFLOAT3(+1.0f, -1.0f, 0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 1.0f)),
+		Vertex(XMFLOAT3(-1.0f, -1.0f, 0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 1.0f)),
 	};
 	unsigned int indices[] = {
 		0, 1, 2

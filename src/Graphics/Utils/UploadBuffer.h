@@ -81,8 +81,11 @@ public:
 
     bool Destroy()
     {
-        mMappedResource->Unmap(0, nullptr);
-        mMappedResource = nullptr;
+        if (mMappedResource)
+        {
+            mMappedResource->Unmap(0, nullptr);
+            mMappedResource = nullptr;
+        }
         return true;
     }
 
