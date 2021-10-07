@@ -16,11 +16,11 @@ static constexpr const char *PipelineTypeString[] =
 
 enum class RootSignatureType
 {
-    Empty = 0, SimpleColor, ObjectFrameMaterial
+    Empty = 0, SimpleColor, ObjectFrameMaterialLights
 };
 static constexpr const char *RootSignatureTypeString[] =
 {
-    "Empty", "SimpleColor", "ObjectFrameMaterial"
+    "Empty", "SimpleColor", "ObjectFrameMaterialLights"
 };
 
 class PipelineManager : public ISingletone<PipelineManager>

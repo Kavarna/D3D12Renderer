@@ -1,6 +1,7 @@
 #ifndef __COMMON_HLSLI__
 #define __COMMON_HLSLI__
 
+#include "../Common/Utils.hlsli"
 
 cbuffer cbPerObject : register(b0)
 {
@@ -26,6 +27,17 @@ cbuffer cbMaterial : register(b2)
     float4x4 MatTransform;
     
     unsigned int HasTexture;
+};
+
+cbuffer SceneLights : register(b3)
+{
+    float4 AmbientColor;
+
+    Light Lights[MAX_LIGHTS];
+    
+    unsigned int NumDirectionalLights;
+    unsigned int NumPointLights;
+    unsigned int NumSpotLights;
 };
 
 struct VSIn

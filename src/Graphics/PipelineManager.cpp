@@ -114,12 +114,13 @@ bool PipelineManager::InitSimpleColorRootSignature()
 bool PipelineManager::InitObjectFrameMaterialRootSignature()
 {
     auto d3d = Direct3D::Get();
-    auto type = RootSignatureType::ObjectFrameMaterial;
+    auto type = RootSignatureType::ObjectFrameMaterialLights;
 
-    CD3DX12_ROOT_PARAMETER parameters[3];
-    parameters[0].InitAsConstantBufferView(0);
-    parameters[1].InitAsConstantBufferView(1);
-    parameters[2].InitAsConstantBufferView(2);
+    CD3DX12_ROOT_PARAMETER parameters[4];
+    parameters[0].InitAsConstantBufferView(0); // Object
+    parameters[1].InitAsConstantBufferView(1); // Pass
+    parameters[2].InitAsConstantBufferView(2); // Material
+    parameters[3].InitAsConstantBufferView(3); // Lights
 
     D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
     signatureDesc.NumParameters = ARRAYSIZE(parameters);
@@ -194,7 +195,7 @@ bool PipelineManager::InitMaterialLightPipeline()
 {
     auto d3d = Direct3D::Get();
     PipelineType type = PipelineType::MaterialLight;
-    RootSignatureType rootSignatureType = RootSignatureType::ObjectFrameMaterial;
+    RootSignatureType rootSignatureType = RootSignatureType::ObjectFrameMaterialLights;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC materialLightPipeline = {};
 
     materialLightPipeline.NodeMask = 0;

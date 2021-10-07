@@ -138,4 +138,37 @@ namespace Math {
     {
         return std::max(lower, std::min(x, upper));
     }
+
+    template <typename T>
+    inline T LinearInterpolation(const T &t, const T &start, const T &end)
+    {
+        return start * (1.0f - t) + end * t;
+    }
+
+    inline DirectX::XMFLOAT2 Normalize(const DirectX::XMFLOAT2 &vect)
+    {
+        DirectX::XMFLOAT2 result;
+        DirectX::XMVECTOR v = DirectX::XMLoadFloat2(&vect);
+        v = DirectX::XMVector2Normalize(v);
+        DirectX::XMStoreFloat2(&result, v);
+        return result;
+    }
+
+    inline DirectX::XMFLOAT3 Normalize(const DirectX::XMFLOAT3 &vect)
+    {
+        DirectX::XMFLOAT3 result;
+        DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&vect);
+        v = DirectX::XMVector3Normalize(v);
+        DirectX::XMStoreFloat3(&result, v);
+        return result;
+    }
+
+    inline DirectX::XMFLOAT4 Normalize(const DirectX::XMFLOAT4 &vect)
+    {
+        DirectX::XMFLOAT4 result;
+        DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&vect);
+        v = DirectX::XMVector4Normalize(v);
+        DirectX::XMStoreFloat4(&result, v);
+        return result;
+    }
 }
