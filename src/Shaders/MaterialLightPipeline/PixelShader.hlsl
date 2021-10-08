@@ -8,7 +8,7 @@ float4 main(VSOut input) : SV_TARGET
     float4 diffuseColor;
     if (HasTexture != -1)
     {
-        diffuseColor = float4(1.0f, 1.0f, 0.0f, 0.0f);
+        diffuseColor = diffuseMap.Sample(clampLinearSampler, input.TexCoord);
     }
     else
     {

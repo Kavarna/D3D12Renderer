@@ -36,6 +36,9 @@ public:
 
     ComPtr<ID3D12Device> GetD3D12Device();
 
+    void CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SHADER_RESOURCE_VIEW_DESC &srvDesc,
+                                  D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+
 public:
     bool AllowTearing();
 

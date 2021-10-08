@@ -15,4 +15,20 @@ bool Texture::Init(ID3D12GraphicsCommandList *cmdList, const wchar_t* path, ComP
     return true;
 }
 
+void Texture::CreateShaderResourceView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    auto d3d = Direct3D::Get();
+    
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = mDesc.Format;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = mDesc.MipLevels;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.PlaneSlice = 0;
+    srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+    d3d->CreateShaderResourceView(mResource.Get(), srvDesc, cpuHandle);
+}
+
 

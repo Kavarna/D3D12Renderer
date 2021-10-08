@@ -8,6 +8,7 @@
 struct PerObjectInfo
 {
     DirectX::XMMATRIX World;
+    DirectX::XMMATRIX TexWorld;
 };
 
 struct PerPassInfo

@@ -88,8 +88,8 @@ private:
     bool CreateTriangle();
 
 private:
-    DirectX::XMMATRIX mWorld;
-    DirectX::XMMATRIX mTexWorld;
+    DirectX::XMMATRIX mWorld = DirectX::XMMatrixIdentity();
+    DirectX::XMMATRIX mTexWorld = DirectX::XMMatrixIdentity();
     RenderParameters mInfo;
     MaterialManager::Material *mMaterial;
 

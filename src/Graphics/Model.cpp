@@ -265,7 +265,8 @@ bool Model::Create(const std::string &path)
 {
 	Assimp::Importer importer;
 
-	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
+	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
+											  aiProcess_ConvertToLeftHanded);
 
 
 	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,

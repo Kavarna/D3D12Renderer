@@ -2,8 +2,43 @@
 #include "Direct3D.h"
 #include "Conversions.h"
 
+std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> GetSamplers()
+{
+    CD3DX12_STATIC_SAMPLER_DESC wrapLinearSampler(0, // shader register
+                                                  D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+                                                  D3D12_TEXTURE_ADDRESS_MODE_WRAP, // address mode U
+                                                  D3D12_TEXTURE_ADDRESS_MODE_WRAP, // address mode V
+                                                  D3D12_TEXTURE_ADDRESS_MODE_WRAP // address mode W
+    );
+
+    CD3DX12_STATIC_SAMPLER_DESC wrapPointSampler(1, // shader register
+                                                 D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+                                                 D3D12_TEXTURE_ADDRESS_MODE_WRAP, // address mode U
+                                                 D3D12_TEXTURE_ADDRESS_MODE_WRAP, // address mode V
+                                                 D3D12_TEXTURE_ADDRESS_MODE_WRAP // address mode W
+    );
+
+    CD3DX12_STATIC_SAMPLER_DESC clampLinearSampler(2, // shader register
+                                                   D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+                                                   D3D12_TEXTURE_ADDRESS_MODE_CLAMP, // address mode U
+                                                   D3D12_TEXTURE_ADDRESS_MODE_CLAMP, // address mode V
+                                                   D3D12_TEXTURE_ADDRESS_MODE_CLAMP // address mode W
+    );
+
+    CD3DX12_STATIC_SAMPLER_DESC clampPointSampler(3, // shader register
+                                                  D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+                                                  D3D12_TEXTURE_ADDRESS_MODE_CLAMP, // address mode U
+                                                  D3D12_TEXTURE_ADDRESS_MODE_CLAMP, // address mode V
+                                                  D3D12_TEXTURE_ADDRESS_MODE_CLAMP // address mode W
+    );
+
+    return { wrapLinearSampler, wrapPointSampler, clampLinearSampler, clampPointSampler };
+}
+
 bool PipelineManager::Init()
 {
+    mSamplers = GetSamplers();
+
     CHECK(InitRootSignatures(), false, "Unable to initialize all root signatures");
     CHECK(InitPipelines(), false, "Unable to initialize all pipelines");
 
@@ -116,16 +151,21 @@ bool PipelineManager::InitObjectFrameMaterialRootSignature()
     auto d3d = Direct3D::Get();
     auto type = RootSignatureType::ObjectFrameMaterialLights;
 
-    CD3DX12_ROOT_PARAMETER parameters[4];
+    CD3DX12_ROOT_PARAMETER parameters[5];
     parameters[0].InitAsConstantBufferView(0); // Object
     parameters[1].InitAsConstantBufferView(1); // Pass
     parameters[2].InitAsConstantBufferView(2); // Material
     parameters[3].InitAsConstantBufferView(3); // Lights
+    
+    CD3DX12_DESCRIPTOR_RANGE srvs[1];
+    srvs[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+    parameters[4].InitAsDescriptorTable(ARRAYSIZE(srvs), srvs);
 
     D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
     signatureDesc.NumParameters = ARRAYSIZE(parameters);
     signatureDesc.pParameters = parameters;
-    signatureDesc.NumStaticSamplers = 0;
+    signatureDesc.NumStaticSamplers = (uint32_t)mSamplers.size();
+    signatureDesc.pStaticSamplers = mSamplers.data();
     signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     auto signature = d3d->CreateRootSignature(signatureDesc);

@@ -178,6 +178,13 @@ ComPtr<ID3D12Device> Direct3D::GetD3D12Device()
     return mDevice;
 }
 
+void Direct3D::CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SHADER_RESOURCE_VIEW_DESC &srvDesc,
+                                        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    mDevice->CreateShaderResourceView(resource, &srvDesc, cpuHandle);
+    SHOWINFO("Successfully created a shader resource view");
+}
+
 bool Direct3D::AllowTearing()
 {
     static std::optional<bool> tearingEnabled;

@@ -383,7 +383,7 @@ void Application::UpdateModels()
         {
             auto mappedMemory = mCurrentFrameResource->PerObjectBuffers.GetMappedMemory(model.ConstantBufferIndex);
             mappedMemory->World = DirectX::XMMatrixTranspose(model.GetWorld());
-
+            mappedMemory->TexWorld = DirectX::XMMatrixTranspose(model.GetTexWorld());
             model.DirtyFrames--;
         }
     }
@@ -403,8 +403,12 @@ void Application::UpdatePassBuffers()
 
 void Application::RenderModels()
 {
+    auto textureManager = TextureManager::Get();
+
     mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
     mCommandList->SetGraphicsRootConstantBufferView(3, mCurrentFrameResource->LightsBuffer.GetGPUVirtualAddress());
+
+    mCommandList->SetDescriptorHeaps(1, textureManager->GetSRVDescriptorHeap().GetAddressOf());
 
     for (unsigned int i = 0; i < mModels.size(); ++i)
     {
@@ -417,6 +421,11 @@ void Application::RenderModels()
         materialBufferAddress += objectMaterial->ConstantBufferIndex * mCurrentFrameResource->MaterialsBuffers.GetElementSize();
         mCommandList->SetGraphicsRootConstantBufferView(2, materialBufferAddress);
 
+        if (objectMaterial->GetTextureIndex() != -1)
+        {
+            mCommandList->SetGraphicsRootDescriptorTable(
+                4, textureManager->GetGPUDescriptorSRVHandleForTextureIndex(objectMaterial->GetTextureIndex()));
+        }
         mCommandList->DrawIndexedInstanced(mModels[i].GetIndexCount(),
                                            1, // Number of instances
                                            mModels[i].GetStartIndexLocation(),

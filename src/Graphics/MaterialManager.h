@@ -19,6 +19,11 @@ public:
         {
         };
 
+        int GetTextureIndex() const
+        {
+            return Info.textureIndex;
+        };
+
         std::string Name;
     private:
         MaterialConstants Info;

@@ -51,6 +51,8 @@ private:
 
 private:
     bool mCreated = false;
+    
+    std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> mSamplers;
 
     std::unordered_map<PipelineType, ComPtr<ID3D12PipelineState>> mPipelines;
     std::unordered_map<PipelineType, RootSignatureType> mPipelineToRootSignature;

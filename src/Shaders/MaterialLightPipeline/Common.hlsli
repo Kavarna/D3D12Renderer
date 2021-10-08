@@ -55,4 +55,11 @@ struct VSOut
     float2 TexCoord : TEXCOORD;
 };
 
+Texture2D diffuseMap : register(s0);
+
+SamplerState wrapLinearSampler : register(s0);
+SamplerState wrapPointSampler : register(s1);
+SamplerState clampLinearSampler : register(s2);
+SamplerState clampPointSampler : register(s3);
+
 #endif // __COMMON_HLSLI__
