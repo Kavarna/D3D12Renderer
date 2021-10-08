@@ -7,6 +7,7 @@
 #include <fmt/ranges.h>
 #include <fmt/os.h>
 #include <fmt/color.h>
+#include <fmt/xchar.h>
 
 #include "TypeOutput.h"
 

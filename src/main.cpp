@@ -9,8 +9,6 @@ void DXGIMemoryCheck()
     debugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
 }
 
-
-
 int main(int argc, char *argv[])
 {
     Logger::Init();

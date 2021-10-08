@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "Direct3D.h"
 #include "PipelineManager.h"
+#include "TextureManager.h"
 
 // Imgui stuff
 #include "Graphics/imgui/imgui.h"
@@ -117,6 +118,7 @@ void Application::OnDestroy()
     d3d->Signal(mFence.Get(), mCurrentFrame);
     d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
 
+    TextureManager::Destroy();
     Model::Destroy();
     PipelineManager::Destroy();
 
@@ -266,6 +268,9 @@ bool Application::InitModels()
 
     ComPtr<ID3D12Resource> intermediaryResources[2];
     CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");
+
+    std::vector<ComPtr<ID3D12Resource>> temporaryResources;
+    CHECK(TextureManager::Get()->CloseAddingTextures(mCommandList.Get(), temporaryResources), false, "Unable to load all textures");
 
     CHECK_HR(mCommandList->Close(), false);
     d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);

@@ -1,7 +1,7 @@
 #include "Model.h"
 #include "Utils/Utils.h"
 #include "Direct3D.h"
-
+#include "TextureManager.h"
 
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
@@ -219,12 +219,22 @@ Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMes
 		fresnel = { 0.25f, 0.25f, 0.25f };
 		SHOWWARNING("Unable get specular color for material {}. Using default { 0.25, 0.25, 0.25 }", materialName);
 	}
+	aiString texturePath;
+	materialInfo.textureIndex = -1;
+	if (currentMaterial->GetTexture(aiTextureType::aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn::aiReturn_SUCCESS)
+	{
+		auto finalPath = std::filesystem::path("./Resources/");
+		finalPath.append(texturePath.C_Str());
+		finalPath = std::filesystem::absolute(finalPath);
+		auto textureIndexResult = TextureManager::Get()->AddTexture(finalPath.string());
+		CHECKSHOW(textureIndexResult.Valid(), "Cannot get texture index for texture {}", texturePath.C_Str());
+		materialInfo.textureIndex = textureIndexResult.Get();
+	}
 
 	materialInfo.DiffuseAlbedo = { diffuseColor.r, diffuseColor.g, diffuseColor.b, 1.0f };
 	materialInfo.MaterialTransform = DirectX::XMMatrixIdentity();
 	materialInfo.Shininess = shininess / 1000.f;
 	materialInfo.FresnelR0 = { fresnel.r, fresnel.g, fresnel.b };
-	materialInfo.textureIndex = -1; // TODO: update this
 
 	std::tuple<std::string, MaterialConstants> result = { materialName, materialInfo };
 	return result;
