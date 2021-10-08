@@ -103,7 +103,7 @@ bool Application::OnInit()
     CHECK(InitImgui(), false, "Unable to initialize imgui");
 
     mSceneLight.SetAmbientColor(0.2f, 0.2f, 0.2f, 1.0f);
-    mSceneLight.AddPointLight("MyPointLight", { 0.0f, 5.0f, 0.0f }, { 0.8f, 0.0f, 0.0f }, 1.0f, 30.0f);
+    mSceneLight.AddPointLight("MyPointLight", { 0.0f, 5.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, 1.0f, 30.0f);
 
     SHOWINFO("Finished initializing application");
     return true;

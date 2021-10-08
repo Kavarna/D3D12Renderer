@@ -82,6 +82,7 @@ DirectX::XMFLOAT3 Camera::GetRightDirection() const
 
 void Camera::MoveForward(float dt)
 {
+    dt *= 5.0f;
     mPosition = DirectX::XMVectorMultiplyAdd(mForwadDirection, DirectX::XMVectorSet(dt, dt, dt, 1.0f), mPosition);
     MarkUpdate();
 }
@@ -93,6 +94,7 @@ void Camera::MoveBackward(float dt)
 
 void Camera::MoveRight(float dt)
 {
+    dt *= 5.0f;
     mPosition = DirectX::XMVectorMultiplyAdd(mRightDirection, DirectX::XMVectorSet(dt, dt, dt, 1.0f), mPosition);
     MarkUpdate();
 }
