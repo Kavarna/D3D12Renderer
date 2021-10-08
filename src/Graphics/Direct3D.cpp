@@ -111,6 +111,7 @@ Result<ComPtr<ID3D12CommandAllocator>> Direct3D::CreateCommandAllocator(D3D12_CO
 {
     ComPtr<ID3D12CommandAllocator> result;
     CHECK_HR(mDevice->CreateCommandAllocator(type, IID_PPV_ARGS(&result)), std::nullopt);
+    SHOWINFO("Successfully created a command allcator");
     return result;
 }
 
@@ -119,6 +120,7 @@ Result<ComPtr<ID3D12GraphicsCommandList>> Direct3D::CreateCommandList(ID3D12Comm
 {
     ComPtr<ID3D12GraphicsCommandList> result;
     CHECK_HR(mDevice->CreateCommandList(0, type, allocator, pipeline, IID_PPV_ARGS(&result)), std::nullopt);
+    SHOWINFO("Successfully created a command list");
     return result;
 }
 
@@ -126,6 +128,7 @@ Result<ComPtr<ID3D12Fence>> Direct3D::CreateFence(uint64_t initialValue)
 {
     ComPtr<ID3D12Fence> result;
     CHECK_HR(mDevice->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&result)), std::nullopt);
+    SHOWINFO("Successfully created a fence");
     return result;
 }
 
@@ -140,7 +143,7 @@ Result<ComPtr<ID3D12DescriptorHeap>> Direct3D::CreateDescriptorHeap(uint32_t num
     heapDesc.Type = type;
     heapDesc.Flags = flags;
     CHECK_HR(mDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&result)), std::nullopt);
-
+    SHOWINFO("Successfully created a descriptor heap with {} descriptors", numDescriptors);
     return result;
 }
 
@@ -148,6 +151,7 @@ Result<ComPtr<ID3D12PipelineState>> Direct3D::CreatePipelineSteate(const D3D12_G
 {
     ComPtr<ID3D12PipelineState> result;
     CHECK_HR(mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&result)), std::nullopt);
+    SHOWINFO("Successfully created a pipeline state");
     return result;
 }
 
@@ -165,7 +169,7 @@ Result<ComPtr<ID3D12RootSignature>> Direct3D::CreateRootSignature(const D3D12_RO
 
     CHECK_HR(mDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
                                           IID_PPV_ARGS(&result)), std::nullopt);
-
+    SHOWINFO("Successfully created a root signature");
     return result;
 }
 
@@ -258,6 +262,7 @@ Result<ComPtr<ID3D12Resource>> Direct3D::CreateDepthStencilBuffer(uint32_t width
         D3D12_RESOURCE_STATE_DEPTH_WRITE, &optimizedClearValue,
         IID_PPV_ARGS(&depthBuffer)), std::nullopt);
 
+    SHOWINFO("Successfully created a depth stencil buffer");
     return depthBuffer;
 }
 
@@ -273,7 +278,7 @@ Result<ComPtr<ID3D12CommandQueue>> Direct3D::CreateCommandQueue(D3D12_COMMAND_LI
     queueDesc.Type = queueType;
 
     CHECK_HR(mDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&queue)), std::nullopt);
-
+    SHOWINFO("Successfully created a command queue");
     return queue;
 }
 
@@ -303,6 +308,7 @@ Result<ComPtr<IDXGISwapChain4>> Direct3D::CreateSwapchain(HWND hwnd)
     ComPtr<IDXGISwapChain4> swapchain;
     CHECK_HR(swapchain1.As(&swapchain), std::nullopt);
 
+    SHOWINFO("Successfully created a swapchain");
     return swapchain;
 }
 
@@ -314,7 +320,7 @@ Result<ComPtr<IDXGIFactory>> Direct3D::CreateFactory()
 #endif
     ComPtr<IDXGIFactory> factory;
     CHECK_HR(CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&factory)), std::nullopt);
-
+    SHOWINFO("Successfully created a dxgi factory");
     return factory;
 }
 
@@ -339,7 +345,7 @@ Result<ComPtr<IDXGIAdapter>> Direct3D::CreateAdapter()
     }
 
     CHECK(bestAdapter, std::nullopt, "Unable to find a suitable adapter");
-
+    SHOWINFO("Successfully created a IDXGIAdapter");
     return bestAdapter;
 }
 
@@ -347,6 +353,7 @@ Result<ComPtr<ID3D12Device>> Direct3D::CreateD3D12Device()
 {
     ComPtr<ID3D12Device> device;
     CHECK_HR(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device)), std::nullopt);
+    SHOWINFO("Successfully created a ID3D12Device");
     return device;
 }
 
