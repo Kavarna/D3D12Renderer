@@ -104,7 +104,8 @@ bool Application::OnInit()
     CHECK(InitImgui(), false, "Unable to initialize imgui");
 
     mSceneLight.SetAmbientColor(0.2f, 0.2f, 0.2f, 1.0f);
-    mSceneLight.AddPointLight("MyPointLight", { 0.0f, 5.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, 1.0f, 30.0f);
+    // mSceneLight.AddPointLight("MyPointLight", { 0.0f, 5.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, 1.0f, 30.0f);
+    mSceneLight.AddDirectionalLight("Sun", { 0.0f,-1.0f, 1.0f }, { 0.6f, 0.6f, 0.6f });
 
     SHOWINFO("Finished initializing application");
     return true;
@@ -176,8 +177,8 @@ bool Application::OnUpdate()
     MaterialManager::Get()->UpdateMaterialsBuffer(mCurrentFrameResource->MaterialsBuffers);
     mSceneLight.UpdateLightsBuffer(mCurrentFrameResource->LightsBuffer);
 
-    mModels[0].RotateY(0.01f);
-    mModels[1].RotateY(-0.01f);
+    // mModels[0].RotateY(0.01f);
+    // mModels[1].RotateY(-0.01f);
 
     return true;
 }
