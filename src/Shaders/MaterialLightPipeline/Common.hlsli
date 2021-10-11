@@ -26,7 +26,7 @@ cbuffer cbMaterial : register(b2)
 
     float4x4 MatTransform;
     
-    unsigned int HasTexture;
+    int HasTexture;
 };
 
 cbuffer SceneLights : register(b3)

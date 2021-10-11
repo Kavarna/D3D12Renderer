@@ -2,24 +2,53 @@
 #include "Conversions.h"
 #include "Conversions.h"
 
-Result<uint32_t> TextureManager::AddTexture(const std::string &path)
+using DESCRIPTOR_FLAG_TYPE = uint8_t;
+constexpr DESCRIPTOR_FLAG_TYPE FLAG_MASK = ~0;
+constexpr auto FLAG_SIZE = 8;
+
+enum TextureFlags
+{
+    SRV = 1,
+    RTV = 2,
+    DSV = 4, 
+};
+
+void WriteDescriptorType(uint64_t& descriptor, DESCRIPTOR_FLAG_TYPE flag)
+{
+    descriptor |= ((((uint64_t)flag) & FLAG_MASK) << (sizeof(descriptor) * 8 - FLAG_SIZE));
+}
+
+DESCRIPTOR_FLAG_TYPE GetDescriptorFlags(uint64_t descriptor)
+{
+    return (descriptor >> (sizeof(descriptor) * 8 - FLAG_SIZE)) & FLAG_MASK;
+}
+
+Result<uint64_t> TextureManager::AddTexture(const std::string &path)
 {
     CHECK(mCanAddTextures, std::nullopt,
           "Cannot add new textures to texture manager, as it is closed");
 
     mTexturesToLoad.push_back(Conversions::s2ws(path));
 
-    return (uint32_t)mTexturesToLoad.size() - 1;
+    uint64_t descriptor = (uint64_t)mTexturesToLoad.size() - 1;
+    WriteDescriptorType(descriptor, TextureFlags::SRV);
+    SHOWINFO("Created SRV with descriptor {} which has flags {:0b}", descriptor, GetDescriptorFlags(descriptor));
+    
+    return descriptor;
 }
 
-Result<uint32_t> TextureManager::AddTexture(LPCWSTR path)
+Result<uint64_t> TextureManager::AddTexture(LPCWSTR path)
 {
     CHECK(mCanAddTextures, std::nullopt,
           "Cannot add new textures to texture manager, as it is closed");
 
     mTexturesToLoad.push_back(path);
 
-    return (uint32_t)mTexturesToLoad.size() - 1;
+    uint64_t descriptor = (uint64_t)mTexturesToLoad.size() - 1;
+    WriteDescriptorType(descriptor, TextureFlags::SRV);
+    SHOWINFO("Created SRV with descriptor {} which has flags {:0b}", descriptor, GetDescriptorFlags(descriptor));
+
+    return descriptor;
 }
 
 bool TextureManager::CloseAddingTextures(ID3D12GraphicsCommandList* cmdList, std::vector<ComPtr<ID3D12Resource>>& intermediaryResources)
@@ -40,8 +69,10 @@ ComPtr<ID3D12DescriptorHeap> TextureManager::GetSRVDescriptorHeap()
     return mSRVDescriptorHeap;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetGPUDescriptorSRVHandleForTextureIndex(uint32_t textureIndex)
+Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSRVHandleForTextureIndex(uint64_t descriptor)
 {
+    CHECK(GetDescriptorFlags(descriptor) & TextureFlags::SRV, std::nullopt, "Descriptor {} is not a valid SRV", descriptor);
+    uint32_t textureIndex = (descriptor) & 0xffffffff;
     auto d3d = Direct3D::Get();
     CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mSRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
     gpuHandle.Offset(textureIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());

@@ -14,15 +14,15 @@ public:
     ~TextureManager() = default;
 
 public:
-    Result<uint32_t> AddTexture(const std::string &path);
-    Result<uint32_t> AddTexture(LPCWSTR path);
+    Result<uint64_t> AddTexture(const std::string &path);
+    Result<uint64_t> AddTexture(LPCWSTR path);
 
 public:
     bool CloseAddingTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources);
     uint32_t GetTextureCount() const;
 
     ComPtr<ID3D12DescriptorHeap> GetSRVDescriptorHeap();
-    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorSRVHandleForTextureIndex(uint32_t textureIndex);
+    Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorSRVHandleForTextureIndex(uint64_t descriptor);
 
 private:
     bool InitTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources);
