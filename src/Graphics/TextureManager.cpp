@@ -71,7 +71,10 @@ ComPtr<ID3D12DescriptorHeap> TextureManager::GetSRVDescriptorHeap()
 
 Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSRVHandleForTextureIndex(uint64_t descriptor)
 {
-    CHECK(GetDescriptorFlags(descriptor) & TextureFlags::SRV, std::nullopt, "Descriptor {} is not a valid SRV", descriptor);
+    CHECK(GetDescriptorFlags(descriptor) & TextureFlags::SRV, std::nullopt,
+          "Descriptor {} is not a valid SRV, expected flag = {:0b}, actual flags = {:0b}",
+          descriptor, TextureFlags::SRV, GetDescriptorFlags(descriptor));
+
     uint32_t textureIndex = (descriptor) & 0xffffffff;
     auto d3d = Direct3D::Get();
     CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mSRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
