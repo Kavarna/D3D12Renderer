@@ -63,12 +63,12 @@ uint32_t TextureManager::GetTextureCount() const
     return mNumTextures;
 }
 
-ComPtr<ID3D12DescriptorHeap> TextureManager::GetSRVDescriptorHeap()
+ComPtr<ID3D12DescriptorHeap> TextureManager::GetSrvUavDescriptorHeap()
 {
-    return mSRVDescriptorHeap;
+    return mSrvUavDescriptorHeap;
 }
 
-Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSRVHandleForTextureIndex(uint32_t textureIndex)
+Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex)
 {
     CHECK(textureIndex < mTextures.size(), std::nullopt,
           "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
@@ -78,7 +78,7 @@ Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSRVHandleFor
     CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a SRV");
 
     auto d3d = Direct3D::Get();
-    CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mSRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
     gpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
     return gpuHandle;
 }
@@ -116,7 +116,7 @@ bool TextureManager::InitDescriptors()
                   d3d->CreateDescriptorHeap(mNumCbvSrvUav, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
                                             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE), false,
                   "Unable to create descriptor heap for textures");
-    CHECK(InitSrvsUavs(), false, "Unable to initialize all SRVs");
+    CHECK(InitAllViews(), false, "Unable to initialize all SRVs");
 
     return true;
 }

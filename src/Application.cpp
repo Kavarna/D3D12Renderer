@@ -409,7 +409,7 @@ void Application::RenderModels()
     mCommandList->SetGraphicsRootConstantBufferView(1, mCurrentFrameResource->PerPassBuffers.GetGPUVirtualAddress());
     mCommandList->SetGraphicsRootConstantBufferView(3, mCurrentFrameResource->LightsBuffer.GetGPUVirtualAddress());
 
-    mCommandList->SetDescriptorHeaps(1, textureManager->GetSRVDescriptorHeap().GetAddressOf());
+    mCommandList->SetDescriptorHeaps(1, textureManager->GetSrvUavDescriptorHeap().GetAddressOf());
 
     for (unsigned int i = 0; i < mModels.size(); ++i)
     {
@@ -419,12 +419,12 @@ void Application::RenderModels()
 
         auto materialBufferAddress = mCurrentFrameResource->MaterialsBuffers.GetGPUVirtualAddress();
         const auto* objectMaterial = mModels[i].GetMaterial();
-        materialBufferAddress += objectMaterial->ConstantBufferIndex * mCurrentFrameResource->MaterialsBuffers.GetElementSize();
+        materialBufferAddress += (uint64_t)objectMaterial->ConstantBufferIndex * mCurrentFrameResource->MaterialsBuffers.GetElementSize();
         mCommandList->SetGraphicsRootConstantBufferView(2, materialBufferAddress);
 
         if (objectMaterial->GetTextureIndex() != -1)
         {
-            auto textureSRVResult = textureManager->GetGPUDescriptorSRVHandleForTextureIndex(objectMaterial->GetTextureIndex());
+            auto textureSRVResult = textureManager->GetGPUDescriptorSrvHandleForTextureIndex(objectMaterial->GetTextureIndex());
             mCommandList->SetGraphicsRootDescriptorTable(
                 4, textureSRVResult.Get());
         }
