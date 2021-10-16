@@ -24,16 +24,8 @@ DESCRIPTOR_FLAG_TYPE GetDescriptorFlags(uint64_t descriptor)
 }
 
 Result<uint32_t> TextureManager::AddTexture(const std::string &path)
-{
-    CHECK(mCanAddTextures, std::nullopt,
-          "Cannot add new textures to texture manager, as it is closed");
-
-    mTexturesToLoad.push_back(Conversions::s2ws(path));
-
-    uint32_t textureIndex = (uint32_t)mTexturesToLoad.size() - 1;
-    SHOWINFO("Created SRV with descriptor {}", textureIndex);
-    
-    return textureIndex;
+{    
+    return AddTexture(Conversions::s2ws(path).c_str());
 }
 
 Result<uint32_t> TextureManager::AddTexture(LPCWSTR path)
@@ -45,6 +37,8 @@ Result<uint32_t> TextureManager::AddTexture(LPCWSTR path)
 
     uint32_t textureIndex = (uint32_t)mTexturesToLoad.size() - 1;
     SHOWINFO("Created SRV with descriptor {}", textureIndex);
+
+    mTextureIndexToHeapIndex[textureIndex] = { textureIndex, -1, -1 };
 
     return textureIndex;
 }
@@ -71,10 +65,14 @@ Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSRVHandleFor
 {
     CHECK(textureIndex < mTextures.size(), std::nullopt,
           "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<0>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a SRV");
 
     auto d3d = Direct3D::Get();
     CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mSRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-    gpuHandle.Offset(textureIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
+    gpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
     return gpuHandle;
 }
 

@@ -37,6 +37,8 @@ private:
 
     std::vector<std::wstring> mTexturesToLoad;
 
+    std::unordered_map<uint32_t, std::tuple<int, int, int>> mTextureIndexToHeapIndex;
+
     std::vector<Texture> mTextures;
 };
 
