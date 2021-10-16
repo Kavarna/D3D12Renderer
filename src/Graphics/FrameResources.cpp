@@ -1,8 +1,9 @@
 #include "FrameResources.h"
 
 #include "Direct3D.h"
+#include "TextureManager.h"
 
-bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials)
+bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials, uint32_t width, uint32_t height)
 {
     auto d3d = Direct3D::Get();
 
@@ -21,6 +22,22 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
 
     CHECK(LightsBuffer.Init(1, true), false,
           "Unable to initialize lights buffer with {} elements", 1);
+
+    CD3DX12_RESOURCE_DESC backbufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+        Direct3D::kBackbufferFormat, width, height, 1, 0, 1, 0,
+        D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    CD3DX12_HEAP_PROPERTIES defaultHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    D3D12_CLEAR_VALUE clearValue;
+    clearValue.Format = Direct3D::kBackbufferFormat;
+    clearValue.Color[0] = 0.0f;
+    clearValue.Color[1] = 0.0f;
+    clearValue.Color[2] = 0.0f;
+    clearValue.Color[3] = 0.0f;
+
+    auto indexResult = TextureManager::Get()->AddTexture(backbufferDesc, defaultHeap, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                                         D3D12_HEAP_FLAG_NONE, &clearValue);
+    CHECK(indexResult.Valid(), false, "Cannot created render target views");
+    RenderTargetIndex = indexResult.Get();
 
     return true;
 }

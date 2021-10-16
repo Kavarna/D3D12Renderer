@@ -18,6 +18,8 @@ bool Texture::Init(ID3D12GraphicsCommandList *cmdList, const wchar_t* path, ComP
 bool Texture::Init(const D3D12_RESOURCE_DESC &resourceDesc, D3D12_CLEAR_VALUE *clearValue, const D3D12_HEAP_PROPERTIES &heapProperties,
                    const D3D12_HEAP_FLAGS &heapFlags, const D3D12_RESOURCE_STATES &state)
 {
+    CHECK(D3DObject::Init(), false, "Unable to initialize d3d object for texture");
+
     CHECK_HR(mDevice->CreateCommittedResource(
         &heapProperties, heapFlags, &resourceDesc,
         state, clearValue, IID_PPV_ARGS(&mResource)), false);

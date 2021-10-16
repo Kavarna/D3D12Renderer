@@ -11,9 +11,9 @@ class TextureManager : public ISingletone<TextureManager>
     MAKE_SINGLETONE_CAPABLE(TextureManager);
 
     static constexpr const uint32_t SRV_INDEX = 0;
-    static constexpr const uint32_t UAV_INDEX = 0;
-    static constexpr const uint32_t RTV_INDEX = 0;
-    static constexpr const uint32_t DSV_INDEX = 0;
+    static constexpr const uint32_t UAV_INDEX = 1;
+    static constexpr const uint32_t RTV_INDEX = 2;
+    static constexpr const uint32_t DSV_INDEX = 3;
 
 public:
     TextureManager() = default;
@@ -54,7 +54,14 @@ private:
             _InitializationType(InitializationParams), _InitializationParams()
         {
             _InitializationParams.resourceDesc = resourceDesc;
-            _InitializationParams.clearValue= clearValue;
+            if (clearValue)
+            {
+                _InitializationParams.clearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
+            }
+            else
+            {
+                _InitializationParams.clearValue = nullptr;
+            }
             _InitializationParams.heapProperties = heapProperties;
             _InitializationParams.heapFlags = heapFlags;
             _InitializationParams.state = state;
@@ -65,7 +72,7 @@ private:
         struct
         {
             D3D12_RESOURCE_DESC resourceDesc;
-            D3D12_CLEAR_VALUE* clearValue;
+            std::unique_ptr<D3D12_CLEAR_VALUE> clearValue;
             D3D12_HEAP_PROPERTIES heapProperties;
             D3D12_HEAP_FLAGS heapFlags;
             D3D12_RESOURCE_STATES state;
@@ -78,6 +85,8 @@ private:
     };
 
     ComPtr<ID3D12DescriptorHeap> mSrvUavDescriptorHeap;
+    ComPtr<ID3D12DescriptorHeap> mRtvDescriptorHeap;
+    ComPtr<ID3D12DescriptorHeap> mDsvDescriptorHeap;
 
     std::vector<TextureInitializationParams> mTexturesToLoad;
 

@@ -270,19 +270,21 @@ bool Application::InitModels()
     ComPtr<ID3D12Resource> intermediaryResources[2];
     CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");
 
-    std::vector<ComPtr<ID3D12Resource>> temporaryResources;
-    CHECK(TextureManager::Get()->CloseAddingTextures(mCommandList.Get(), temporaryResources), false, "Unable to load all textures");
+    mCamera.Create({ 0.0f, 0.0f, -3.0f }, (float)mClientWidth / mClientHeight);
 
     CHECK_HR(mCommandList->Close(), false);
     d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
-
-    mCamera.Create({ 0.0f, 0.0f, -3.0f }, (float)mClientWidth / mClientHeight);
 
     return true;
 }
 
 bool Application::InitFrameResources()
 {
+    auto d3d = Direct3D::Get();
+
+    CHECK_HR(mInitializationCommandAllocator->Reset(), false);
+    CHECK_HR(mCommandList->Reset(mInitializationCommandAllocator.Get(), nullptr), false);
+
     MaterialManager::Get()->CloseAddingMaterials();
     uint32_t numModels = (uint32_t)mModels.size();
     uint32_t numPasses = 1;
@@ -290,9 +292,15 @@ bool Application::InitFrameResources()
 
     for (unsigned int i = 0; i < mFrameResources.size(); ++i)
     {
-        CHECK(mFrameResources[i].Init(numModels, numPasses, numMaterials), false, "Unable to init frame resource at index {}", i);
+        CHECK(mFrameResources[i].Init(numModels, numPasses, numMaterials, mClientWidth, mClientHeight),
+              false, "Unable to init frame resource at index {}", i);
     }
-    
+
+    std::vector<ComPtr<ID3D12Resource>> temporaryResources;
+    CHECK(TextureManager::Get()->CloseAddingTextures(mCommandList.Get(), temporaryResources), false, "Unable to load all textures");
+
+    CHECK_HR(mCommandList->Close(), false);
+    d3d->Flush(mCommandList.Get(), mFence.Get(), ++mCurrentFrame);
 
     return true;
 }
