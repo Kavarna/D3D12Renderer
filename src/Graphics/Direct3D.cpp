@@ -185,6 +185,24 @@ void Direct3D::CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SH
     SHOWINFO("Successfully created a shader resource view");
 }
 
+void Direct3D::CreateUnorderedAccessView(ID3D12Resource *resource, const D3D12_UNORDERED_ACCESS_VIEW_DESC &uavDesc, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    mDevice->CreateUnorderedAccessView(resource, nullptr, &uavDesc, cpuHandle);
+    SHOWINFO("Successfully created a unordered access view");
+}
+
+void Direct3D::CreateRenderTargetView(ID3D12Resource *resource, const D3D12_RENDER_TARGET_VIEW_DESC &rtvDesc, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    mDevice->CreateRenderTargetView(resource, &rtvDesc, cpuHandle);
+    SHOWINFO("Successfully created a render target view");
+}
+
+void Direct3D::CreateDepthStencilView(ID3D12Resource *resource, const D3D12_DEPTH_STENCIL_VIEW_DESC &dsvDesc, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    mDevice->CreateDepthStencilView(resource, &dsvDesc, cpuHandle);
+    SHOWINFO("Successfully created a depth stencil view");
+}
+
 bool Direct3D::AllowTearing()
 {
     static std::optional<bool> tearingEnabled;

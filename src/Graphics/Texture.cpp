@@ -15,6 +15,20 @@ bool Texture::Init(ID3D12GraphicsCommandList *cmdList, const wchar_t* path, ComP
     return true;
 }
 
+bool Texture::Init(const D3D12_RESOURCE_DESC &resourceDesc, D3D12_CLEAR_VALUE *clearValue, const D3D12_HEAP_PROPERTIES &heapProperties,
+                   const D3D12_HEAP_FLAGS &heapFlags, const D3D12_RESOURCE_STATES &state)
+{
+    CHECK_HR(mDevice->CreateCommittedResource(
+        &heapProperties, heapFlags, &resourceDesc,
+        state, clearValue, IID_PPV_ARGS(&mResource)), false);
+
+    mCurrentResourceState = state;
+    mDesc = mResource->GetDesc();
+
+    return true;
+}
+
+
 void Texture::CreateShaderResourceView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {
     auto d3d = Direct3D::Get();
@@ -29,6 +43,38 @@ void Texture::CreateShaderResourceView(ID3D12DescriptorHeap *heap, D3D12_CPU_DES
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
     d3d->CreateShaderResourceView(mResource.Get(), srvDesc, cpuHandle);
+}
+
+void Texture::CreateUnorederedAccessView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    auto d3d = Direct3D::Get();
+
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+    uavDesc.Format = mDesc.Format;
+    uavDesc.Texture2D.MipSlice = 0;
+    uavDesc.Texture2D.PlaneSlice = 0;
+
+    d3d->CreateUnorderedAccessView(mResource.Get(), uavDesc, cpuHandle);
+}
+
+void Texture::CreateRenderTargetView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    auto d3d = Direct3D::Get();
+
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = mDesc.Format;
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    rtvDesc.Texture2D.MipSlice = 0;
+    rtvDesc.Texture2D.PlaneSlice = 0;
+    
+    d3d->CreateRenderTargetView(mResource.Get(), rtvDesc, cpuHandle);
+}
+
+void Texture::CreateDepthStencilView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    auto d3d = Direct3D::Get();
+
 }
 
 

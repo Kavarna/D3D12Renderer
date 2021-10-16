@@ -38,6 +38,12 @@ public:
 
     void CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SHADER_RESOURCE_VIEW_DESC &srvDesc,
                                   D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+    void CreateUnorderedAccessView(ID3D12Resource *resource, const D3D12_UNORDERED_ACCESS_VIEW_DESC &uavDesc,
+                                   D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+    void CreateRenderTargetView(ID3D12Resource *resource, const D3D12_RENDER_TARGET_VIEW_DESC &rtvDesc,
+                                D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+    void CreateDepthStencilView(ID3D12Resource *resource, const D3D12_DEPTH_STENCIL_VIEW_DESC &dsvDesc,
+                                D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
 
 public:
     bool AllowTearing();

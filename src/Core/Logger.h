@@ -162,6 +162,11 @@ CHECKRET(__res.Valid(), format, __VA_ARGS__);\
 var = __res.Get();\
 }
 
+#define RETURN_ERROR(ret, format, ...) {\
+SHOWINFO(format, __VA_ARGS__);\
+return (ret);\
+}\
+
 inline const TCHAR *GetStringFromHr(HRESULT hr)
 {
     _com_error err(hr);
