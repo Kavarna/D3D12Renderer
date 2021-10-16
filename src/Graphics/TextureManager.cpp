@@ -74,7 +74,7 @@ Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSrvHandleFor
           "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
     CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
           "Texture index {} is not a index recognized by TextureManager");
-    auto heapIndex = std::get<0>(mTextureIndexToHeapIndex[textureIndex]);
+    auto heapIndex = std::get<SRV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
     CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a SRV");
 
     auto d3d = Direct3D::Get();
@@ -82,6 +82,57 @@ Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorSrvHandleFor
     gpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
     return gpuHandle;
 }
+
+Result<D3D12_CPU_DESCRIPTOR_HANDLE> TextureManager::GetCPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<SRV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a SRV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    cpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
+    return cpuHandle;
+}
+
+ComPtr<ID3D12DescriptorHeap> TextureManager::GetRtvDescriptorHeap()
+{
+    return mRtvDescriptorHeap;
+}
+
+Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorRtvHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<RTV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a RTV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mRtvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    gpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
+    return gpuHandle;
+}
+
+Result<D3D12_CPU_DESCRIPTOR_HANDLE> TextureManager::GetCPUDescriptorRtvHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<RTV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a RTV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    cpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>());
+    return cpuHandle;
+}
+
 
 bool TextureManager::InitTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources)
 {

@@ -26,7 +26,7 @@ static constexpr const char *LogLevelString[] =
     " FATAL "
 };
 
-extern fmt::ostream gOutputStream;
+extern std::ofstream gOutputStream;
 
 void Init();
 
@@ -56,7 +56,8 @@ constexpr void Log(LogLevel level, const char *fileName, unsigned int lineNumber
 #else
     fmt::print(stringToPrint);
 #endif
-    gOutputStream.print(stringToPrint);
+    gOutputStream << stringToPrint;
+    gOutputStream.flush();
 }
 
 void Close();

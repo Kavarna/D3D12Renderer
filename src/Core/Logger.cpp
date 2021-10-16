@@ -1,6 +1,6 @@
 #include "Logger.h"
 
-fmt::ostream Logger::gOutputStream = fmt::output_file("OblivionLogs.txt");
+std::ofstream Logger::gOutputStream("OblivionLogs.txt");
 
 void Logger::Init()
 {

@@ -24,6 +24,9 @@ public:
     void OnRenderEnd(ID3D12GraphicsCommandList *cmdList);
     void Present();
 
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle();
+    D3D12_CPU_DESCRIPTOR_HANDLE GetBackbufferHandle();
+
 public:
     Result<ComPtr<ID3D12CommandAllocator>> CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE type);
     Result<ComPtr<ID3D12GraphicsCommandList>> CreateCommandList(ID3D12CommandAllocator *allocator,

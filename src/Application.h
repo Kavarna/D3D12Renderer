@@ -69,8 +69,8 @@ private:
 
     uint64_t mCurrentFrame = 0;
 
-    D3D12_VIEWPORT mViewport;
-    D3D12_RECT mScissors;
+    D3D12_VIEWPORT mViewport, mBlurViewport;
+    D3D12_RECT mScissors, mBlurScissors;
 private:
     unsigned int mClientWidth = 800, mClientHeight = 600;
     bool mMenuActive = true;

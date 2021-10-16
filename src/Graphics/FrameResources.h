@@ -65,7 +65,7 @@ struct FrameResources
     UploadBuffer<MaterialConstants> MaterialsBuffers;
     UploadBuffer<LightsBuffer> LightsBuffer;
 
-    uint32_t RenderTargetIndex;
+    uint32_t BlurRenderTargetIndex;
 
     uint64_t FenceValue = 0;
 };

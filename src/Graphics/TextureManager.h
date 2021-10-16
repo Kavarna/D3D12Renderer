@@ -33,6 +33,11 @@ public:
 
     ComPtr<ID3D12DescriptorHeap> GetSrvUavDescriptorHeap();
     Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex);
+    Result<D3D12_CPU_DESCRIPTOR_HANDLE> GetCPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex);
+
+    ComPtr<ID3D12DescriptorHeap> GetRtvDescriptorHeap();
+    Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorRtvHandleForTextureIndex(uint32_t textureIndex);
+    Result<D3D12_CPU_DESCRIPTOR_HANDLE> GetCPUDescriptorRtvHandleForTextureIndex(uint32_t textureIndex);
 
 private:
     bool InitTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources);

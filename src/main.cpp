@@ -11,10 +11,16 @@ void DXGIMemoryCheck()
 
 int main(int argc, char *argv[])
 {
-    Logger::Init();
-    Application app;
-    CHECK(app.Init(GetModuleHandle(NULL)), 0, "Cannot initialize application");
-    app.Run();
+    try
+    {
+        Logger::Init();
+        Application app;
+        CHECK(app.Init(GetModuleHandle(NULL)), 0, "Cannot initialize application");
+        app.Run();
+    }
+    catch (...)
+    {
+    }
     Logger::Close();
     return 0;
 }

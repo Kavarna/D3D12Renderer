@@ -146,11 +146,17 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mViewport.TopLeftY = 0;
     mViewport.MinDepth = 0.0f;
     mViewport.MaxDepth = 1.0f;
+    mBlurViewport = mViewport;
+    mBlurViewport.Width /= 4.f;
+    mBlurViewport.Height /= 4.f;
 
     mScissors.left = 0;
     mScissors.top = 0;
     mScissors.right = mClientWidth;
     mScissors.bottom = mClientWidth;
+    mBlurScissors = mScissors;
+    mBlurScissors.right /= 4;
+    mBlurScissors.bottom /= 4;
 
     mCamera.Create(mCamera.GetPosition(), (float)mClientWidth / mClientHeight);
 
@@ -187,6 +193,8 @@ bool Application::OnRender()
 {
     auto d3d = Direct3D::Get();
 
+    FLOAT backgroundColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
     auto pipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::MaterialLight);
     CHECK(pipelineResult.Valid(), false, "Unable to retrieve pipeline and root signature");
     auto [pipeline, rootSignature] = pipelineResult.Get();
@@ -194,15 +202,33 @@ bool Application::OnRender()
     CHECK_HR(mCurrentFrameResource->CommandAllocator->Reset(), false);
     CHECK_HR(mCommandList->Reset(mCurrentFrameResource->CommandAllocator.Get(), pipeline), false);
 
-    d3d->OnRenderBegin(mCommandList.Get());    
+    d3d->OnRenderBegin(mCommandList.Get());
+
+    mCommandList->RSSetViewports(1, &mBlurViewport);
+    mCommandList->RSSetScissorRects(1, &mBlurScissors);
+
+    auto rtvHandleResult = TextureManager::Get()->GetCPUDescriptorRtvHandleForTextureIndex(mCurrentFrameResource->BlurRenderTargetIndex);
+    CHECK(rtvHandleResult.Valid(), false, "Unable to get rtv handle for texture index", mCurrentFrameResource->BlurRenderTargetIndex);
+    auto rtvHandle = rtvHandleResult.Get();
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = d3d->GetDSVHandle();
+
+    mCommandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &dsvHandle);
+    mCommandList->ClearRenderTargetView(rtvHandle, backgroundColor, 0, nullptr);
+    mCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
     mCommandList->SetGraphicsRootSignature(rootSignature);
 
     Model::Bind(mCommandList.Get());
 
+    RenderModels();
+
+    D3D12_CPU_DESCRIPTOR_HANDLE backbufferHandle = d3d->GetBackbufferHandle();
+
+    mCommandList->OMSetRenderTargets(1, &backbufferHandle, TRUE, &dsvHandle);
+
     mCommandList->RSSetViewports(1, &mViewport);
     mCommandList->RSSetScissorRects(1, &mScissors);
 
-    RenderModels();
     RenderGUI();
 
     d3d->OnRenderEnd(mCommandList.Get());

@@ -24,7 +24,7 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
           "Unable to initialize lights buffer with {} elements", 1);
 
     CD3DX12_RESOURCE_DESC backbufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-        Direct3D::kBackbufferFormat, width, height, 1, 0, 1, 0,
+        Direct3D::kBackbufferFormat, width / 4, height / 4, 1, 0, 1, 0,
         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     CD3DX12_HEAP_PROPERTIES defaultHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     D3D12_CLEAR_VALUE clearValue;
@@ -32,12 +32,12 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
     clearValue.Color[0] = 0.0f;
     clearValue.Color[1] = 0.0f;
     clearValue.Color[2] = 0.0f;
-    clearValue.Color[3] = 0.0f;
+    clearValue.Color[3] = 1.0f;
 
     auto indexResult = TextureManager::Get()->AddTexture(backbufferDesc, defaultHeap, D3D12_RESOURCE_STATE_RENDER_TARGET,
                                                          D3D12_HEAP_FLAG_NONE, &clearValue);
     CHECK(indexResult.Valid(), false, "Cannot created render target views");
-    RenderTargetIndex = indexResult.Get();
+    BlurRenderTargetIndex = indexResult.Get();
 
     return true;
 }
