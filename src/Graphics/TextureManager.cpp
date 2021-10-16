@@ -163,18 +163,30 @@ bool TextureManager::InitTextures(ID3D12GraphicsCommandList *cmdList, std::vecto
 bool TextureManager::InitDescriptors()
 {
     auto d3d = Direct3D::Get();
-    ASSIGN_RESULT(mSrvUavDescriptorHeap,
-                  d3d->CreateDescriptorHeap(mNumCbvSrvUav, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-                                            D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
-                  false, "Unable to create descriptor heap for srv & uav");
+    
+    // Apparently PIX doesn't like it when heaps with 0 descriptors are created
 
-    ASSIGN_RESULT(mRtvDescriptorHeap,
-                  d3d->CreateDescriptorHeap(mNumRtv, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
-                  false, "Unable to create descriptor heap for rtv");
+    if (mNumCbvSrvUav > 0)
+    {
+        ASSIGN_RESULT(mSrvUavDescriptorHeap,
+                      d3d->CreateDescriptorHeap(mNumCbvSrvUav, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+                                                D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
+                      false, "Unable to create descriptor heap for srv & uav");
+    }
 
-    ASSIGN_RESULT(mDsvDescriptorHeap,
-                  d3d->CreateDescriptorHeap(mNumDsv, D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
-                  false, "Unable to create descriptor heap for dsv");
+    if (mNumRtv > 0)
+    {
+        ASSIGN_RESULT(mRtvDescriptorHeap,
+                      d3d->CreateDescriptorHeap(mNumRtv, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
+                      false, "Unable to create descriptor heap for rtv");
+    }
+
+    if (mNumDsv > 0)
+    {
+        ASSIGN_RESULT(mDsvDescriptorHeap,
+                      d3d->CreateDescriptorHeap(mNumDsv, D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
+                      false, "Unable to create descriptor heap for dsv");
+    }
 
     CHECK(InitAllViews(), false, "Unable to initialize all SRVs");
 
