@@ -14,21 +14,19 @@ public:
     {
         friend class MaterialManager;
         Material(unsigned int maxDirtyFrames, unsigned int cbIndex,
-                 std::string materialName, const MaterialConstants &info,
-                 uint64_t textureDescriptor):
-            UpdateObject(maxDirtyFrames, cbIndex), Name(materialName), Info(info), TextureDescriptor(textureDescriptor)
+                 std::string materialName, const MaterialConstants &info):
+            UpdateObject(maxDirtyFrames, cbIndex), Name(materialName), Info(info)
         {
         };
 
-        uint64_t GetTextureDescriptor() const
+        unsigned int GetTextureIndex() const
         {
-            return TextureDescriptor;
-        };
+            return Info.textureIndex;
+        }
 
         std::string Name;
     private:
         MaterialConstants Info;
-        uint64_t TextureDescriptor = 0;
     };
 
 public:
@@ -36,8 +34,7 @@ public:
     ~MaterialManager() = default;
 
 public:
-    Material *AddMaterial(unsigned int maxDirtyFrames, const std::string &materialName,
-                          const MaterialConstants &, uint64_t textureDescriptor);
+    Material *AddMaterial(unsigned int maxDirtyFrames, const std::string &materialName, const MaterialConstants &);
     void UpdateMaterialsBuffer(UploadBuffer<MaterialConstants> &materialsBuffer);
     
     uint32_t GetNumMaterials() const;

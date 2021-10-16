@@ -422,10 +422,9 @@ void Application::RenderModels()
         materialBufferAddress += objectMaterial->ConstantBufferIndex * mCurrentFrameResource->MaterialsBuffers.GetElementSize();
         mCommandList->SetGraphicsRootConstantBufferView(2, materialBufferAddress);
 
-        if (objectMaterial->GetTextureDescriptor() != 0)
+        if (objectMaterial->GetTextureIndex() != -1)
         {
-            auto textureSRVResult = textureManager->GetGPUDescriptorSRVHandleForTextureIndex(objectMaterial->GetTextureDescriptor());
-            CHECKCONT(textureSRVResult.Valid(), "Unable to get GPU Descriptor SRV Handle for for model at index {}", i);
+            auto textureSRVResult = textureManager->GetGPUDescriptorSRVHandleForTextureIndex(objectMaterial->GetTextureIndex());
             mCommandList->SetGraphicsRootDescriptorTable(
                 4, textureSRVResult.Get());
         }

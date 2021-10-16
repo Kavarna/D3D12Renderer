@@ -1,7 +1,7 @@
 #include "MaterialManager.h"
 
 MaterialManager::Material *MaterialManager::AddMaterial(unsigned int maxDirtyFrames, const std::string &materialName,
-                                                        const MaterialConstants &info, uint64_t textureDescriptor)
+                                                        const MaterialConstants &info)
 {
     CHECK(mCanAddMaterial, nullptr, "Material manager is closed for adding materials");
 
@@ -12,8 +12,8 @@ MaterialManager::Material *MaterialManager::AddMaterial(unsigned int maxDirtyFra
     }
 
     SHOWINFO("Material {} not found in material manager. Adding it . . .", materialName);
-    mMaterials.insert({ materialName, Material(maxDirtyFrames, (uint32_t)mMaterials.size(), materialName, info, textureDescriptor) });
-    return AddMaterial(maxDirtyFrames, materialName, info, textureDescriptor);
+    mMaterials.insert({ materialName, Material(maxDirtyFrames, (uint32_t)mMaterials.size(), materialName, info) });
+    return AddMaterial(maxDirtyFrames, materialName, info);
 }
 
 void MaterialManager::UpdateMaterialsBuffer(UploadBuffer<MaterialConstants> &materialsBuffer)

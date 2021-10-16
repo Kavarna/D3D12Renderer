@@ -146,9 +146,9 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 
 	auto materialInfoResult = ProcessMaterialFromMesh(mesh, scene);
 	CHECK(materialInfoResult.Valid(), false, "[Loading Model {}] Cannot get material from mesh {}", path, meshName);
-	auto [materialName, materialInfo, textureDescriptor] = materialInfoResult.Get();
+	auto [materialName, materialInfo] = materialInfoResult.Get();
 	mMaterial = MaterialManager::Get()->AddMaterial(
-		GetMaxDirtyFrames(), materialName, materialInfo, textureDescriptor);
+		GetMaxDirtyFrames(), materialName, materialInfo);
 	CHECK(mMaterial != nullptr, false, "[Loading Model {}] Cannot add material {} to material manager ", path, materialName);
 
 	std::vector<Vertex> vertices;
@@ -193,13 +193,12 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	return true;
 }
 
-Result<std::tuple<std::string, MaterialConstants, uint64_t>> Model::ProcessMaterialFromMesh(const aiMesh *mesh, const aiScene *scene)
+Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMesh(const aiMesh *mesh, const aiScene *scene)
 {
 	CHECK(mesh->mMaterialIndex < scene->mNumMaterials, std::nullopt,
 		  "Invalid material index {}. It should be less than {}",
 		  mesh->mMaterialIndex, scene->mNumMaterials);
 
-	uint64_t textureDescriptor = 0;
 	auto currentMaterial = scene->mMaterials[mesh->mMaterialIndex];
 	std::string materialName = currentMaterial->GetName().C_Str();
 	MaterialConstants materialInfo = {};
@@ -230,8 +229,7 @@ Result<std::tuple<std::string, MaterialConstants, uint64_t>> Model::ProcessMater
 		finalPath = std::filesystem::absolute(finalPath);
 		auto textureIndexResult = TextureManager::Get()->AddTexture(finalPath.string());
 		CHECKSHOW(textureIndexResult.Valid(), "Cannot get texture index for texture {}", texturePath.C_Str());
-		textureDescriptor = textureIndexResult.Get();
-		materialInfo.textureIndex = 1;
+		materialInfo.textureIndex = textureIndexResult.Get();
 	}
 
 	materialInfo.DiffuseAlbedo = { diffuseColor.r, diffuseColor.g, diffuseColor.b, 1.0f };
@@ -239,7 +237,7 @@ Result<std::tuple<std::string, MaterialConstants, uint64_t>> Model::ProcessMater
 	materialInfo.Shininess = shininess / 1000.f;
 	materialInfo.FresnelR0 = { fresnel.r, fresnel.g, fresnel.b };
 
-	std::tuple<std::string, MaterialConstants, uint64_t> result = { materialName, materialInfo, textureDescriptor };
+	std::tuple<std::string, MaterialConstants> result = { materialName, materialInfo };
 	return result;
 }
 

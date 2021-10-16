@@ -61,7 +61,7 @@ public:
 private:
     bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
     bool ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path);
-    Result<std::tuple<std::string, MaterialConstants, uint64_t>> ProcessMaterialFromMesh(const aiMesh *mesh, const aiScene *scene);
+    Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh *mesh, const aiScene *scene);
 
 private:
     static std::vector<Vertex> mVertices;
