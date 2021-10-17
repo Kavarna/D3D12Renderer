@@ -103,6 +103,36 @@ Result<D3D12_CPU_DESCRIPTOR_HANDLE> TextureManager::GetCPUDescriptorSrvHandleFor
     return cpuHandle;
 }
 
+Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorUavHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<UAV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a UAV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    gpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
+    return gpuHandle;
+}
+
+Result<D3D12_CPU_DESCRIPTOR_HANDLE> TextureManager::GetCPUDescriptorUavHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<UAV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a UAV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    cpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>());
+    return cpuHandle;
+}
+
 ComPtr<ID3D12DescriptorHeap> TextureManager::GetRtvDescriptorHeap()
 {
     return mRtvDescriptorHeap;
@@ -300,6 +330,8 @@ bool TextureManager::InitAllViews()
         }
     }
 
-    SHOWINFO("Successfully created {} shader resource views", mTexturesToLoad.size());
+    SHOWINFO("Successfully created {} cbv / srv / uav", mNumCbvSrvUav);
+    SHOWINFO("Successfully created {} rtv", mNumRtv);
+    SHOWINFO("Successfully created {} dsv", mNumDsv);
     return true;
 }

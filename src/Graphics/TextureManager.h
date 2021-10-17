@@ -36,6 +36,8 @@ public:
     ComPtr<ID3D12DescriptorHeap> GetSrvUavDescriptorHeap();
     Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex);
     Result<D3D12_CPU_DESCRIPTOR_HANDLE> GetCPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex);
+    Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorUavHandleForTextureIndex(uint32_t textureIndex);
+    Result<D3D12_CPU_DESCRIPTOR_HANDLE> GetCPUDescriptorUavHandleForTextureIndex(uint32_t textureIndex);
 
     ComPtr<ID3D12DescriptorHeap> GetRtvDescriptorHeap();
     Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorRtvHandleForTextureIndex(uint32_t textureIndex);

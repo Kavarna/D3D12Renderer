@@ -3,6 +3,6 @@
 
 float4 main(VSOut input) : SV_TARGET
 {
-    return diffuseMap.Sample(wrapLinearSampler, input.TexCoords);
+    return diffuseMap.Sample(clampLinearSampler, input.TexCoords);
 }
 

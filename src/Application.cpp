@@ -229,7 +229,8 @@ bool Application::OnRender()
 
     RenderModels();
 
-    textureManager->Transition(mCommandList.Get(), mCurrentFrameResource->BlurRenderTargetIndex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    // Apply blur
+    mBlurFilter.Apply(mCommandList.Get(), mCurrentFrameResource->BlurRenderTargetIndex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 3);
 
     // Render to backbuffer
     D3D12_CPU_DESCRIPTOR_HANDLE backbufferHandle = d3d->GetBackbufferHandle();
@@ -351,6 +352,8 @@ bool Application::InitFrameResources()
         CHECK(mFrameResources[i].Init(numModels, numPasses, numMaterials, mClientWidth, mClientHeight),
               false, "Unable to init frame resource at index {}", i);
     }
+
+    CHECK(mBlurFilter.Init(mClientWidth, mClientHeight, 2.5f), false, "Unable to initialize blur filter");
 
     std::vector<ComPtr<ID3D12Resource>> temporaryResources;
     CHECK(TextureManager::Get()->CloseAddingTextures(mCommandList.Get(), temporaryResources), false, "Unable to load all textures");

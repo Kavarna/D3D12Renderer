@@ -34,7 +34,8 @@ public:
     Result<ComPtr<ID3D12Fence>> CreateFence(uint64_t initialValue);
     Result<ComPtr<ID3D12DescriptorHeap>> CreateDescriptorHeap(uint32_t numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type,
                                                               D3D12_DESCRIPTOR_HEAP_FLAGS flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
-    Result<ComPtr<ID3D12PipelineState>> CreatePipelineSteate(const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc);
+    Result<ComPtr<ID3D12PipelineState>> CreatePipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc);
+    Result<ComPtr<ID3D12PipelineState>> CreatePipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC &desc);
     Result<ComPtr<ID3D12RootSignature>> CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC &desc);
 
     ComPtr<ID3D12Device> GetD3D12Device();

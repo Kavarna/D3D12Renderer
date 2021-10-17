@@ -12,6 +12,7 @@ FILE(GLOB_RECURSE INPUT_SRC "Input/*.cpp" "Input/*.h")
 FILE(GLOB_RECURSE SHADERS_COMMON "Shaders/*.hlsli")
 FILE(GLOB_RECURSE PIXEL_SHADERS "Shaders/Pixel*.hlsl")
 FILE(GLOB_RECURSE VERTEX_SHADERS "Shaders/Vertex*.hlsl")
+FILE(GLOB_RECURSE COMPUTE_SHADERS "Shaders/Compute*.hlsl")
 
 include_directories("Graphics")
 include_directories("Input")
@@ -25,13 +26,15 @@ add_executable(D3D12Renderer
                 ${INPUT_SRC}
                 ${PIXEL_SHADERS}
                 ${VERTEX_SHADERS}
+                ${COMPUTE_SHADERS}
                 ${SHADERS_COMMON})
 
                 
 target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib")
 
-make_filters("${PIXEL_SHADERS}")
 make_filters("${VERTEX_SHADERS}")
+make_filters("${PIXEL_SHADERS}")
+make_filters("${COMPUTE_SHADERS}")
 make_filters("${SHADERS_COMMON}")
 make_filters("${CORE_SRC}")
 make_filters("${COMMON}")
@@ -65,3 +68,4 @@ endmacro()
 
 prepare_shaders("${PIXEL_SHADERS}" "Pixel" "6.0")
 prepare_shaders("${VERTEX_SHADERS}" "Vertex" "6.0")
+prepare_shaders("${COMPUTE_SHADERS}" "Compute" "6.0")

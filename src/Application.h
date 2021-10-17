@@ -6,6 +6,7 @@
 #include "FrameResources.h"
 #include "Camera.h"
 #include "SceneLight.h"
+#include "BlurFilter.h"
 
 #include "Keyboard.h"
 #include "Mouse.h"
@@ -61,6 +62,8 @@ private:
     ComPtr<ID3D12Fence> mFence;
     std::vector<Model> mModels;
     Model mSquare;
+
+    BlurFilter mBlurFilter;
 
     std::array<FrameResources, Direct3D::kBufferCount> mFrameResources;
     FrameResources *mCurrentFrameResource;

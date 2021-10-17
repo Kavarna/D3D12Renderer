@@ -151,11 +151,19 @@ Result<ComPtr<ID3D12DescriptorHeap>> Direct3D::CreateDescriptorHeap(uint32_t num
     return result;
 }
 
-Result<ComPtr<ID3D12PipelineState>> Direct3D::CreatePipelineSteate(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc)
+Result<ComPtr<ID3D12PipelineState>> Direct3D::CreatePipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc)
 {
     ComPtr<ID3D12PipelineState> result;
     CHECK_HR(mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&result)), std::nullopt);
     SHOWINFO("Successfully created a pipeline state");
+    return result;
+}
+
+Result<ComPtr<ID3D12PipelineState>> Direct3D::CreatePipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC &desc)
+{
+    ComPtr<ID3D12PipelineState> result;
+    CHECK_HR(mDevice->CreateComputePipelineState(&desc, IID_PPV_ARGS(&result)), std::nullopt);
+    SHOWINFO("Successfully created a compute pipeline state");
     return result;
 }
 

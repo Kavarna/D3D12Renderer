@@ -91,6 +91,7 @@ bool PipelineManager::InitRootSignatures()
     CHECK(InitSimpleColorRootSignature(), false, "Unable to initialize simple color's root signature");
     CHECK(InitObjectFrameMaterialRootSignature(), false, "Unable to initialize object frame material root signature");
     CHECK(InitTextureOnlyRootSignature(), false, "Unable to initialize texture only root signature");
+    CHECK(InitTextureSrvUavBufferRootSignature(), false, "Unable to initialize texture srv uav and buffer signature");
 
     SHOWINFO("Successfully initialized all root signatures");
     return true;
@@ -101,6 +102,7 @@ bool PipelineManager::InitPipelines()
     CHECK(InitSimpleColorPipeline(), false, "Unable to initialize simple color pipeline");
     CHECK(InitMaterialLightPipeline(), false, "Unable to initialize material light pipeline");
     CHECK(InitRawTexturePipeline(), false, "Unable to initialize raw texture pipeline");
+    CHECK(InitBlurPipelines(), false, "Unable to initialize blur pipelines");
 
     SHOWINFO("Successfully initialized all pipelines");
     return true;
@@ -191,7 +193,7 @@ bool PipelineManager::InitTextureOnlyRootSignature()
     D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
     signatureDesc.NumParameters = ARRAYSIZE(parameters);
     signatureDesc.pParameters = parameters;
-    signatureDesc.NumStaticSamplers = 1;
+    signatureDesc.NumStaticSamplers = (uint32_t)mSamplers.size();
     signatureDesc.pStaticSamplers = mSamplers.data();
     signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
@@ -200,6 +202,34 @@ bool PipelineManager::InitTextureOnlyRootSignature()
     mRootSignatures[type] = signature.Get();
 
     SHOWINFO("Successfully initialized texture only root signature");
+    return true;
+}
+
+bool PipelineManager::InitTextureSrvUavBufferRootSignature()
+{
+    auto d3d = Direct3D::Get();
+    auto type = RootSignatureType::TextureSrvUavBuffer;
+
+    CD3DX12_DESCRIPTOR_RANGE srvRanges[1], uavRanges[1];
+    srvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+    uavRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0);
+    CD3DX12_ROOT_PARAMETER parameters[3];
+    parameters[0].InitAsDescriptorTable(ARRAYSIZE(srvRanges), srvRanges);
+    parameters[1].InitAsDescriptorTable(ARRAYSIZE(uavRanges), uavRanges);
+    parameters[2].InitAsConstantBufferView(0);
+
+    D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
+    signatureDesc.NumParameters = ARRAYSIZE(parameters);
+    signatureDesc.pParameters = parameters;
+    signatureDesc.NumStaticSamplers = 0;
+    signatureDesc.pStaticSamplers = nullptr;
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    auto signature = d3d->CreateRootSignature(signatureDesc);
+    CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
+    mRootSignatures[type] = signature.Get();
+
+    SHOWINFO("Successfully initialized texture srv uav and buffer signature");
     return true;
 }
 
@@ -246,7 +276,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
     simpleColorPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
 
-    auto pipeline = d3d->CreatePipelineSteate(simpleColorPipeline);
+    auto pipeline = d3d->CreatePipelineState(simpleColorPipeline);
     CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
     
     mPipelines[type] = pipeline.Get();
@@ -301,7 +331,7 @@ bool PipelineManager::InitMaterialLightPipeline()
     materialLightPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
     materialLightPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
 
-    auto pipeline = d3d->CreatePipelineSteate(materialLightPipeline);
+    auto pipeline = d3d->CreatePipelineState(materialLightPipeline);
     CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
 
     mPipelines[type] = pipeline.Get();
@@ -355,7 +385,7 @@ bool PipelineManager::InitRawTexturePipeline()
     materialLightPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
     materialLightPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
 
-    auto pipeline = d3d->CreatePipelineSteate(materialLightPipeline);
+    auto pipeline = d3d->CreatePipelineState(materialLightPipeline);
     CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
 
     mPipelines[type] = pipeline.Get();
@@ -364,6 +394,48 @@ bool PipelineManager::InitRawTexturePipeline()
     mPipelineToRootSignature[type] = rootSignatureType;
 
     SHOWINFO("Successfully initialized raw texture pipeline");
+    return true;
+}
+
+bool PipelineManager::InitBlurPipelines()
+{
+    auto d3d = Direct3D::Get();
+    PipelineType type = PipelineType::HorizontalBlur;
+    RootSignatureType rootSignatureType = RootSignatureType::TextureSrvUavBuffer;
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC pipelineStateDesc = {};
+
+    pipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+    pipelineStateDesc.NodeMask = 0;
+    pipelineStateDesc.pRootSignature = mRootSignatures[rootSignatureType].Get();
+    pipelineStateDesc.CachedPSO.CachedBlobSizeInBytes = 0;
+    pipelineStateDesc.CachedPSO.pCachedBlob = nullptr;
+    
+    ComPtr<ID3DBlob> horizontalBlurComputeShader, verticalBlurComputeShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\HorizontalBlurPipeline_ComputeShader.cso", &horizontalBlurComputeShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\VerticalBlurPipeline_ComputeShader.cso", &verticalBlurComputeShader), false);
+
+    pipelineStateDesc.CS.BytecodeLength = horizontalBlurComputeShader->GetBufferSize();
+    pipelineStateDesc.CS.pShaderBytecode = horizontalBlurComputeShader->GetBufferPointer();
+
+    auto pipeline = d3d->CreatePipelineState(pipelineStateDesc);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(horizontalBlurComputeShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
+    type = PipelineType::VerticalBlur;
+
+    pipelineStateDesc.CS.BytecodeLength = verticalBlurComputeShader->GetBufferSize();
+    pipelineStateDesc.CS.pShaderBytecode = verticalBlurComputeShader->GetBufferPointer();
+    pipeline = d3d->CreatePipelineState(pipelineStateDesc);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+    
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(verticalBlurComputeShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
     return true;
 }
 
