@@ -60,6 +60,7 @@ private:
 
     ComPtr<ID3D12Fence> mFence;
     std::vector<Model> mModels;
+    Model mSquare;
 
     std::array<FrameResources, Direct3D::kBufferCount> mFrameResources;
     FrameResources *mCurrentFrameResource;

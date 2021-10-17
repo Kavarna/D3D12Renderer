@@ -15,7 +15,7 @@ public:
     void Init(unsigned int maxDirtyFrames, unsigned int constantBufferIndex = 0)
     {
         mMaxDirtyFrames = maxDirtyFrames;
-        ConstantBufferIndex = ConstantBufferIndex;
+        ConstantBufferIndex = constantBufferIndex;
         DirtyFrames = mMaxDirtyFrames;
     }
 
@@ -30,11 +30,17 @@ public:
     }
 
 public:
-    unsigned int DirtyFrames;
-    unsigned int ConstantBufferIndex;
+    unsigned int DirtyFrames = (unsigned int)-1;
+    unsigned int ConstantBufferIndex = (unsigned int)-1;
+
+protected:
+    bool Valid()
+    {
+        return (mMaxDirtyFrames != -1 && DirtyFrames != -1 && ConstantBufferIndex != -1);
+    }
 
 private:
-    unsigned int mMaxDirtyFrames;
+    unsigned int mMaxDirtyFrames = (unsigned int)-1;
 };
 
 

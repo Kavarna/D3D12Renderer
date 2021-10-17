@@ -30,6 +30,18 @@ bool Texture::Init(const D3D12_RESOURCE_DESC &resourceDesc, D3D12_CLEAR_VALUE *c
     return true;
 }
 
+void Texture::Transition(ID3D12GraphicsCommandList *cmdList, D3D12_RESOURCE_STATES state)
+{
+    if (state == mCurrentResourceState)
+    {
+        return;
+    }
+
+    CD3DX12_RESOURCE_BARRIER barrier =
+        CD3DX12_RESOURCE_BARRIER::Transition(mResource.Get(), mCurrentResourceState, state);
+    mCurrentResourceState = state;
+    cmdList->ResourceBarrier(1, &barrier);
+}
 
 void Texture::CreateShaderResourceView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {

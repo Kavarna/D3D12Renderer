@@ -7,20 +7,20 @@
 
 enum class PipelineType
 {
-    SimpleColor = 0, MaterialLight
+    SimpleColor = 0, MaterialLight, RawTexture,
 };
 static constexpr const char *PipelineTypeString[] =
 {
-    "SimpleColor", "MaterialLight"
+    "SimpleColor", "MaterialLight", "RawTexture"
 };
 
 enum class RootSignatureType
 {
-    Empty = 0, SimpleColor, ObjectFrameMaterialLights
+    Empty = 0, SimpleColor, ObjectFrameMaterialLights, TextureOnly
 };
 static constexpr const char *RootSignatureTypeString[] =
 {
-    "Empty", "SimpleColor", "ObjectFrameMaterialLights"
+    "Empty", "SimpleColor", "ObjectFrameMaterialLights", "TextureOnly"
 };
 
 class PipelineManager : public ISingletone<PipelineManager>
@@ -44,10 +44,12 @@ private:
     bool InitEmptyRootSignature();
     bool InitSimpleColorRootSignature();
     bool InitObjectFrameMaterialRootSignature();
+    bool InitTextureOnlyRootSignature();
 
 private:
     bool InitSimpleColorPipeline();
     bool InitMaterialLightPipeline();
+    bool InitRawTexturePipeline();
 
 private:
     bool mCreated = false;

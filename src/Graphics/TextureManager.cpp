@@ -63,6 +63,11 @@ uint32_t TextureManager::GetTextureCount() const
     return mNumTextures;
 }
 
+void TextureManager::Transition(ID3D12GraphicsCommandList* cmdList, uint32_t textureIndex, D3D12_RESOURCE_STATES state)
+{
+    mTextures[textureIndex].Transition(cmdList, state);
+}
+
 ComPtr<ID3D12DescriptorHeap> TextureManager::GetSrvUavDescriptorHeap()
 {
     return mSrvUavDescriptorHeap;

@@ -90,6 +90,7 @@ bool PipelineManager::InitRootSignatures()
     CHECK(InitEmptyRootSignature(), false, "Unable to initialize an empty root signature");
     CHECK(InitSimpleColorRootSignature(), false, "Unable to initialize simple color's root signature");
     CHECK(InitObjectFrameMaterialRootSignature(), false, "Unable to initialize object frame material root signature");
+    CHECK(InitTextureOnlyRootSignature(), false, "Unable to initialize texture only root signature");
 
     SHOWINFO("Successfully initialized all root signatures");
     return true;
@@ -99,6 +100,7 @@ bool PipelineManager::InitPipelines()
 {
     CHECK(InitSimpleColorPipeline(), false, "Unable to initialize simple color pipeline");
     CHECK(InitMaterialLightPipeline(), false, "Unable to initialize material light pipeline");
+    CHECK(InitRawTexturePipeline(), false, "Unable to initialize raw texture pipeline");
 
     SHOWINFO("Successfully initialized all pipelines");
     return true;
@@ -173,6 +175,31 @@ bool PipelineManager::InitObjectFrameMaterialRootSignature()
     mRootSignatures[type] = signature.Get();
 
     SHOWINFO("Successfully initialized object frame material root signature");
+    return true;
+}
+
+bool PipelineManager::InitTextureOnlyRootSignature()
+{
+    auto d3d = Direct3D::Get();
+    auto type = RootSignatureType::TextureOnly;
+
+    CD3DX12_DESCRIPTOR_RANGE ranges[1];
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+    CD3DX12_ROOT_PARAMETER parameters[1];
+    parameters[0].InitAsDescriptorTable(1, ranges);
+
+    D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
+    signatureDesc.NumParameters = ARRAYSIZE(parameters);
+    signatureDesc.pParameters = parameters;
+    signatureDesc.NumStaticSamplers = 1;
+    signatureDesc.pStaticSamplers = mSamplers.data();
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    auto signature = d3d->CreateRootSignature(signatureDesc);
+    CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
+    mRootSignatures[type] = signature.Get();
+
+    SHOWINFO("Successfully initialized texture only root signature");
     return true;
 }
 
@@ -283,6 +310,60 @@ bool PipelineManager::InitMaterialLightPipeline()
     mPipelineToRootSignature[type] = rootSignatureType;
 
     SHOWINFO("Successfully initialized material light pipeline");
+    return true;
+}
+
+bool PipelineManager::InitRawTexturePipeline()
+{
+    auto d3d = Direct3D::Get();
+    PipelineType type = PipelineType::RawTexture;
+    RootSignatureType rootSignatureType = RootSignatureType::TextureOnly;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC materialLightPipeline = {};
+
+    materialLightPipeline.NodeMask = 0;
+    materialLightPipeline.BlendState = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT());
+    materialLightPipeline.CachedPSO.CachedBlobSizeInBytes = 0;
+    materialLightPipeline.CachedPSO.pCachedBlob = nullptr;
+    materialLightPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+    materialLightPipeline.DepthStencilState.StencilEnable = FALSE;
+    materialLightPipeline.DepthStencilState.DepthEnable = FALSE;
+    materialLightPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+    materialLightPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+    materialLightPipeline.NumRenderTargets = 1;
+    materialLightPipeline.RTVFormats[0] = Direct3D::kBackbufferFormat;
+    materialLightPipeline.SampleDesc.Count = 1;
+    materialLightPipeline.SampleDesc.Quality = 0;
+    materialLightPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    materialLightPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    materialLightPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+
+    auto rootSignature = mRootSignatures.find(rootSignatureType);
+    CHECK(!(rootSignature == mRootSignatures.end()), false,
+          "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
+    materialLightPipeline.pRootSignature = rootSignature->second.Get();
+
+    auto elementDesc = PositionNormalTexCoordVertex::GetInputElementDesc();
+    materialLightPipeline.InputLayout.NumElements = (uint32_t)elementDesc.size();
+    materialLightPipeline.InputLayout.pInputElementDescs = elementDesc.data();
+
+    ComPtr<ID3DBlob> vertexShader, pixelShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\RawTexturePipeline_VertexShader.cso", &vertexShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\RawTexturePipeline_PixelShader.cso", &pixelShader), false);
+
+    materialLightPipeline.VS.BytecodeLength = vertexShader->GetBufferSize();
+    materialLightPipeline.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+    materialLightPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
+    materialLightPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+
+    auto pipeline = d3d->CreatePipelineSteate(materialLightPipeline);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(vertexShader);
+    mShaders[type].push_back(pixelShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
+    SHOWINFO("Successfully initialized raw texture pipeline");
     return true;
 }
 

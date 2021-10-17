@@ -31,6 +31,8 @@ public:
     bool CloseAddingTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources);
     uint32_t GetTextureCount() const;
 
+    void Transition(ID3D12GraphicsCommandList *cmdList, uint32_t textureIndex, D3D12_RESOURCE_STATES state);
+
     ComPtr<ID3D12DescriptorHeap> GetSrvUavDescriptorHeap();
     Result<D3D12_GPU_DESCRIPTOR_HANDLE> GetGPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex);
     Result<D3D12_CPU_DESCRIPTOR_HANDLE> GetCPUDescriptorSrvHandleForTextureIndex(uint32_t textureIndex);

@@ -26,13 +26,18 @@ public:
     };
 
 public:
-    Model() = delete;
+    Model() = default;
     Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex);
     ~Model() = default;
 
 public:
     bool Create(ModelType type);
     bool Create(const std::string &path);
+    bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
+    bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path);
+
+    bool ShouldRender() const;
+    void SetShouldRender(bool shouldRender);
 
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
@@ -92,6 +97,6 @@ private:
     DirectX::XMMATRIX mWorld = DirectX::XMMatrixIdentity();
     DirectX::XMMATRIX mTexWorld = DirectX::XMMatrixIdentity();
     RenderParameters mInfo;
-    MaterialManager::Material *mMaterial;
-
+    MaterialManager::Material *mMaterial = nullptr;
+    bool mShouldRender = false;
 };

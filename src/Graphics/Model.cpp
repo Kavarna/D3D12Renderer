@@ -244,12 +244,14 @@ Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMes
 }
 
 Model::Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex) : 
-	UpdateObject(maxDirtyFrames, constantBufferIndex), mWorld(DirectX::XMMatrixIdentity())
+	UpdateObject(maxDirtyFrames, constantBufferIndex)
 {
 }
 
 bool Model::Create(ModelType type)
 {
+	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
+		  "Try calling Create(unsigned int, unsigned int, ModelType) instead of this");
 	switch (type)
 	{
 		case Model::ModelType::Triangle:
@@ -269,6 +271,8 @@ bool Model::Create(ModelType type)
 
 bool Model::Create(const std::string &path)
 {
+	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
+		  "Try calling Create(unsigned int, unsigned int, std::string) instead of this");
 	Assimp::Importer importer;
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
@@ -279,6 +283,28 @@ bool Model::Create(const std::string &path)
 		  "Unable to load model located at path {}", path);
 
 	return true;
+}
+
+bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type)
+{
+	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+	return Create(type);
+}
+
+bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path)
+{
+	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+	return Create(path);
+}
+
+bool Model::ShouldRender() const
+{
+	return mShouldRender;
+}
+
+void Model::SetShouldRender(bool shouldRender)
+{
+	mShouldRender = shouldRender;
 }
 
 bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2])

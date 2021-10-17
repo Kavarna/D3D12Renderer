@@ -16,6 +16,9 @@ public:
               const D3D12_HEAP_FLAGS &heapFlags,
               const D3D12_RESOURCE_STATES &state);
 
+    void Transition(ID3D12GraphicsCommandList *cmdList, D3D12_RESOURCE_STATES state);
+
+public:
     void CreateShaderResourceView(ID3D12DescriptorHeap* heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
     void CreateUnorederedAccessView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
     void CreateRenderTargetView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);

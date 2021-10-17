@@ -147,16 +147,16 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mViewport.MinDepth = 0.0f;
     mViewport.MaxDepth = 1.0f;
     mBlurViewport = mViewport;
-    mBlurViewport.Width /= 4.f;
-    mBlurViewport.Height /= 4.f;
+    mBlurViewport.Width /= (float)FrameResources::kBlurScale;
+    mBlurViewport.Height /= (float)FrameResources::kBlurScale;;
 
     mScissors.left = 0;
     mScissors.top = 0;
     mScissors.right = mClientWidth;
     mScissors.bottom = mClientWidth;
     mBlurScissors = mScissors;
-    mBlurScissors.right /= 4;
-    mBlurScissors.bottom /= 4;
+    mBlurScissors.right /= FrameResources::kBlurScale;
+    mBlurScissors.bottom /= FrameResources::kBlurScale;
 
     mCamera.Create(mCamera.GetPosition(), (float)mClientWidth / mClientHeight);
 
@@ -192,6 +192,7 @@ bool Application::OnUpdate()
 bool Application::OnRender()
 {
     auto d3d = Direct3D::Get();
+    auto textureManager = TextureManager::Get();
 
     FLOAT backgroundColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -203,6 +204,9 @@ bool Application::OnRender()
     CHECK_HR(mCommandList->Reset(mCurrentFrameResource->CommandAllocator.Get(), pipeline), false);
 
     d3d->OnRenderBegin(mCommandList.Get());
+
+    // Render to texture
+    textureManager->Transition(mCommandList.Get(), mCurrentFrameResource->BlurRenderTargetIndex, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
     mCommandList->RSSetViewports(1, &mBlurViewport);
     mCommandList->RSSetScissorRects(1, &mBlurScissors);
@@ -225,12 +229,33 @@ bool Application::OnRender()
 
     RenderModels();
 
-    D3D12_CPU_DESCRIPTOR_HANDLE backbufferHandle = d3d->GetBackbufferHandle();
+    textureManager->Transition(mCommandList.Get(), mCurrentFrameResource->BlurRenderTargetIndex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
+    // Render to backbuffer
+    D3D12_CPU_DESCRIPTOR_HANDLE backbufferHandle = d3d->GetBackbufferHandle();
     mCommandList->OMSetRenderTargets(1, &backbufferHandle, TRUE, nullptr);
+    mCommandList->ClearRenderTargetView(backbufferHandle, backgroundColor, 0, nullptr);
+
+    auto rawTexturePipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::RawTexture);
+    CHECK(rawTexturePipelineResult.Valid(), false, "Unable to retrieve pipeline and root signature for raw texture");
+    std::tie(pipeline, rootSignature) = rawTexturePipelineResult.Get();
+
+    mCommandList->SetPipelineState(pipeline);
+    mCommandList->SetGraphicsRootSignature(rootSignature);
+
+    Model::Bind(mCommandList.Get());
+    mCommandList->SetDescriptorHeaps(1, textureManager->GetSrvUavDescriptorHeap().GetAddressOf());
+
+    auto srvCpuHandleResult = textureManager->GetGPUDescriptorSrvHandleForTextureIndex(mCurrentFrameResource->BlurRenderTargetIndex);
+    CHECK(srvCpuHandleResult.Valid(), false, "Unable to get srv handle for texture index {}", mCurrentFrameResource->BlurRenderTargetIndex);
+    auto srvCpuHandle = srvCpuHandleResult.Get();
+    mCommandList->SetGraphicsRootDescriptorTable(0, srvCpuHandle);
 
     mCommandList->RSSetViewports(1, &mViewport);
     mCommandList->RSSetScissorRects(1, &mScissors);
+
+    mCommandList->DrawIndexedInstanced(
+        mSquare.GetIndexCount(), 1, mSquare.GetStartIndexLocation(), mSquare.GetBaseVertexLocation(), 0);
 
     RenderGUI();
 
@@ -242,7 +267,7 @@ bool Application::OnRender()
     d3d->Present();
     d3d->Signal(mFence.Get(), mCurrentFrame);
   
-    mCurrentFrameResource->FenceValue = mCurrentFrame++;
+    mCurrentFrameResource->FenceValue = ++mCurrentFrame;
 
     return true;
 }
@@ -295,6 +320,8 @@ bool Application::InitModels()
     mModels.emplace_back(Direct3D::kBufferCount, 1);
     CHECK(mModels.back().Create("Resources\\Cube.obj"), false, "Unable to load Cube");
     mModels.back().Translate(-2.0f, 0.0f, 0.0f);
+
+    CHECK(mSquare.Create(Direct3D::kBufferCount, 2, Model::ModelType::Square), false, "Unable to create square");
 
     ComPtr<ID3D12Resource> intermediaryResources[2];
     CHECK(Model::InitBuffers(mCommandList.Get(), intermediaryResources), false, "Unable to initialize buffers for models");
