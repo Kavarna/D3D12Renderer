@@ -208,9 +208,12 @@ bool Application::OnRender()
     mCommandList->RSSetScissorRects(1, &mBlurScissors);
 
     auto rtvHandleResult = TextureManager::Get()->GetCPUDescriptorRtvHandleForTextureIndex(mCurrentFrameResource->BlurRenderTargetIndex);
-    CHECK(rtvHandleResult.Valid(), false, "Unable to get rtv handle for texture index", mCurrentFrameResource->BlurRenderTargetIndex);
+    CHECK(rtvHandleResult.Valid(), false, "Unable to get rtv handle for texture index {}", mCurrentFrameResource->BlurRenderTargetIndex);
     auto rtvHandle = rtvHandleResult.Get();
-    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = d3d->GetDSVHandle();
+
+    auto dsvHandleResult = TextureManager::Get()->GetCPUDescriptorDsvHandleForTextureIndex(mCurrentFrameResource->BlurDepthStencilIndex);
+    CHECK(dsvHandleResult.Valid(), false, "Unable to get dsv handle for texture index {}", mCurrentFrameResource->BlurDepthStencilIndex);
+    auto dsvHandle = dsvHandleResult.Get();
 
     mCommandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &dsvHandle);
     mCommandList->ClearRenderTargetView(rtvHandle, backgroundColor, 0, nullptr);
@@ -224,7 +227,7 @@ bool Application::OnRender()
 
     D3D12_CPU_DESCRIPTOR_HANDLE backbufferHandle = d3d->GetBackbufferHandle();
 
-    mCommandList->OMSetRenderTargets(1, &backbufferHandle, TRUE, &dsvHandle);
+    mCommandList->OMSetRenderTargets(1, &backbufferHandle, TRUE, nullptr);
 
     mCommandList->RSSetViewports(1, &mViewport);
     mCommandList->RSSetScissorRects(1, &mScissors);

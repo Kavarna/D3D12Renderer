@@ -18,11 +18,11 @@ class Model : public UpdateObject
 public:
     enum class ModelType
     {
-        Triangle = 0
+        Triangle = 0, Square
     };
     static constexpr const char *ModelTypeString[] =
     {
-        "Triangle"
+        "Triangle", "Square"
     };
 
 public:
@@ -86,6 +86,7 @@ private:
 
 private:
     bool CreateTriangle();
+    bool CreateSquare();
 
 private:
     DirectX::XMMATRIX mWorld = DirectX::XMMatrixIdentity();

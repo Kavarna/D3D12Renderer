@@ -131,7 +131,9 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 			if (mesh->mNumVertices == renderParameters.VertexCount &&
 				(mesh->mNumFaces * 3) == renderParameters.IndexCount)
 			{
-				SHOWINFO("[Loading Model {}] Mesh {} loaded once, using that version", path, meshName);
+				SHOWWARNING("[Loading Model {}] Mesh {} loaded once, using that version. "\
+							"You should be using instancing instead of loading multiple times the same mesh",
+							path, meshName);
 				mInfo = mModelsRenderParameters[meshName];
 				return true;
 			}
@@ -253,6 +255,9 @@ bool Model::Create(ModelType type)
 		case Model::ModelType::Triangle:
 			CHECK(CreateTriangle(), false, "Unable to create triangle");
 			break;
+		case Model::ModelType::Square:
+			CHECK(CreateSquare(), false, "Unable to create square");
+			break;
 		// TODO: add more default shapes
 		default:
 			SHOWFATAL("Model type {} is not a valid model", (int)type);
@@ -346,6 +351,42 @@ bool Model::CreateTriangle()
 	std::move(std::begin(indices), std::end(indices), std::back_inserter(mIndices));
 
 	mInfo = mModelsRenderParameters["Triangle"];
+
+	return true;
+}
+
+bool Model::CreateSquare()
+{
+	if (auto squareIt = mModelsRenderParameters.find("Square"); squareIt != mModelsRenderParameters.end())
+	{
+		mInfo = (*squareIt).second;
+		SHOWWARNING("Square was already created once. You should be using instancing instead of creating multiple models");
+		return true;
+	}
+
+	Vertex vertices[] = {
+		Vertex(XMFLOAT3(-1.0f, +1.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 0.0f)),
+		Vertex(XMFLOAT3(+1.0f, +1.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 0.0f)),
+		Vertex(XMFLOAT3(+1.0f, -1.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 1.0f)),
+		Vertex(XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 1.0f)),
+	};
+	unsigned int indices[] = {
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	mModelsRenderParameters["Square"].BaseVertexLocation = (uint32_t)mVertices.size();
+	mModelsRenderParameters["Square"].StartIndexLocation = (uint32_t)mIndices.size();
+	mModelsRenderParameters["Square"].VertexCount = ARRAYSIZE(vertices);
+	mModelsRenderParameters["Square"].IndexCount = ARRAYSIZE(indices);
+
+	mVertices.reserve(mVertices.size() + ARRAYSIZE(vertices));
+	std::move(std::begin(vertices), std::end(vertices), std::back_inserter(mVertices));
+
+	mIndices.reserve(mIndices.size() + ARRAYSIZE(indices));
+	std::move(std::begin(indices), std::end(indices), std::back_inserter(mIndices));
+
+	mInfo = mModelsRenderParameters["Square"];
 
 	return true;
 }

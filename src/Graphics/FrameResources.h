@@ -66,6 +66,7 @@ struct FrameResources
     UploadBuffer<LightsBuffer> LightsBuffer;
 
     uint32_t BlurRenderTargetIndex;
+    uint32_t BlurDepthStencilIndex;
 
     uint64_t FenceValue = 0;
 };

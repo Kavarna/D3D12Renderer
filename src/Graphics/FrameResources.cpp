@@ -38,6 +38,16 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
                                                          D3D12_HEAP_FLAG_NONE, &clearValue);
     CHECK(indexResult.Valid(), false, "Cannot created render target views");
     BlurRenderTargetIndex = indexResult.Get();
+    CD3DX12_RESOURCE_DESC depthDesc = backbufferDesc;
+    depthDesc.Format = Direct3D::kDepthStencilFormat;
+    depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+    clearValue.Format = Direct3D::kDepthStencilFormat;
+    clearValue.DepthStencil.Depth = 1.0f;
+    clearValue.DepthStencil.Stencil = 0;
+    indexResult = TextureManager::Get()->AddTexture(depthDesc, defaultHeap, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                                                    D3D12_HEAP_FLAG_NONE, &clearValue);
+    CHECK(indexResult.Valid(), false, "Cannot create depth stencil view");
+    BlurDepthStencilIndex = indexResult.Get();
 
     return true;
 }

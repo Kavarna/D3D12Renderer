@@ -133,6 +133,40 @@ Result<D3D12_CPU_DESCRIPTOR_HANDLE> TextureManager::GetCPUDescriptorRtvHandleFor
     return cpuHandle;
 }
 
+ComPtr<ID3D12DescriptorHeap> TextureManager::GetDsvDescriptorHeap()
+{
+    return mDsvDescriptorHeap;
+}
+
+Result<D3D12_GPU_DESCRIPTOR_HANDLE> TextureManager::GetGPUDescriptorDsvHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<DSV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a DSV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(mDsvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    gpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_DSV>());
+    return gpuHandle;
+}
+
+Result<D3D12_CPU_DESCRIPTOR_HANDLE> TextureManager::GetCPUDescriptorDsvHandleForTextureIndex(uint32_t textureIndex)
+{
+    CHECK(textureIndex < mTextures.size(), std::nullopt,
+          "Texture index {} is invalid. This value should be less than {}", textureIndex, mTextures.size());
+    CHECK(mTextureIndexToHeapIndex.find(textureIndex) != mTextureIndexToHeapIndex.end(), std::nullopt,
+          "Texture index {} is not a index recognized by TextureManager");
+    auto heapIndex = std::get<DSV_INDEX>(mTextureIndexToHeapIndex[textureIndex]);
+    CHECK(heapIndex != -1, std::nullopt, "Texture index {} is not a DSV");
+
+    auto d3d = Direct3D::Get();
+    CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    cpuHandle.Offset(heapIndex, d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_DSV>());
+    return cpuHandle;
+}
 
 bool TextureManager::InitTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources)
 {
@@ -254,7 +288,7 @@ bool TextureManager::InitAllViews()
                 mTextures[i].CreateDepthStencilView(
                     mDsvDescriptorHeap.Get(),
                     cpuHandle.Offset(std::get<DSV_INDEX>(mTextureIndexToHeapIndex[i]), 
-                                     d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>()));
+                                     d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_DSV>()));
                 createdViews++;
             }
             SHOWINFO("Created {} views for texture located at index {}", createdViews, i);

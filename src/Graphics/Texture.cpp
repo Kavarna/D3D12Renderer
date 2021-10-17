@@ -77,6 +77,13 @@ void Texture::CreateDepthStencilView(ID3D12DescriptorHeap *heap, D3D12_CPU_DESCR
 {
     auto d3d = Direct3D::Get();
 
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = mDesc.Format;
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION::D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+    dsvDesc.Texture2D.MipSlice = 0;
+
+    d3d->CreateDepthStencilView(mResource.Get(), dsvDesc, cpuHandle);
 }
 
 
