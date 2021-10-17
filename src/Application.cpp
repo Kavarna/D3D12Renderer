@@ -158,7 +158,13 @@ bool Application::OnResize(uint32_t width, uint32_t height)
     mBlurScissors.right /= FrameResources::kBlurScale;
     mBlurScissors.bottom /= FrameResources::kBlurScale;
 
+    for (auto& frameResource : mFrameResources)
+    {
+        CHECKCONT(frameResource.OnResize(width, height), false, "Unable to resize frame resources");
+    }
+
     mCamera.Create(mCamera.GetPosition(), (float)mClientWidth / mClientHeight);
+    mBlurFilter.OnResize(width, height);
 
     d3d->OnResize(width, height);
 
@@ -230,7 +236,8 @@ bool Application::OnRender()
     RenderModels();
 
     // Apply blur
-    mBlurFilter.Apply(mCommandList.Get(), mCurrentFrameResource->BlurRenderTargetIndex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 3);
+    CHECK(mBlurFilter.Apply(mCommandList.Get(), mCurrentFrameResource->BlurRenderTargetIndex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 5),
+          false, "Unable to apply blur filter");
 
     // Render to backbuffer
     D3D12_CPU_DESCRIPTOR_HANDLE backbufferHandle = d3d->GetBackbufferHandle();

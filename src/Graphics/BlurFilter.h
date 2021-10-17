@@ -19,6 +19,7 @@ public:
 
     bool Apply(ID3D12GraphicsCommandList *cmdList, uint32_t textureIndex,
                D3D12_RESOURCE_STATES finalState, uint32_t passCount);
+    bool OnResize(uint32_t width, uint32_t height);
 
 private:
     Result<std::vector<float>> GetGaussWeights(float sigma);

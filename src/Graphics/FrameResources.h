@@ -60,6 +60,7 @@ struct FrameResources
     ~FrameResources() = default;
 
     bool Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials, uint32_t width, uint32_t height);
+    bool OnResize(uint32_t width, uint32_t height);
 
     ComPtr<ID3D12CommandAllocator> CommandAllocator;
 

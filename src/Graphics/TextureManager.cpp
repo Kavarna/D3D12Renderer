@@ -50,6 +50,36 @@ Result<uint32_t> TextureManager::AddTexture(const D3D12_RESOURCE_DESC &resourceD
     return textureIndex;
 }
 
+bool TextureManager::UpdateTexture(uint32_t textureIndex, ID3D12GraphicsCommandList *cmdList, const std::string &path,
+                                   ComPtr<ID3D12Resource> intermediaryResource)
+{
+    return UpdateTexture(textureIndex, cmdList, Conversions::s2ws(path).c_str(), intermediaryResource);
+}
+
+bool TextureManager::UpdateTexture(uint32_t textureIndex, ID3D12GraphicsCommandList *cmdList, LPCWSTR path,
+                                   ComPtr<ID3D12Resource> intermediaryResource)
+{
+    CHECK(mTextures[textureIndex].Init(cmdList, mTexturesToLoad[textureIndex]._Path.c_str(), intermediaryResource),
+          false, "Unable to initialize texture {}", Conversions::ws2s(mTexturesToLoad[textureIndex]._Path));
+    mTexturesToLoad[textureIndex] = TextureInitializationParams(path);
+    InitAllViews(textureIndex);
+
+    return true;
+}
+
+bool TextureManager::UpdateTexture(uint32_t textureIndex, const D3D12_RESOURCE_DESC &resourceDesc, const D3D12_HEAP_PROPERTIES &heapProperties,
+                                   const D3D12_RESOURCE_STATES &state, const D3D12_HEAP_FLAGS &heapFlags,
+                                   D3D12_CLEAR_VALUE *clearValue)
+{
+    CHECK(mTextures[textureIndex].Init(resourceDesc, clearValue ? clearValue : nullptr,
+                            heapProperties, heapFlags, state), false,
+          "Unable to initialize texture at index {}", textureIndex);
+    mTexturesToLoad[textureIndex] = TextureInitializationParams(resourceDesc, heapProperties, state, heapFlags, clearValue);
+    InitAllViews(textureIndex);
+
+    return true;
+}
+
 bool TextureManager::CloseAddingTextures(ID3D12GraphicsCommandList* cmdList, std::vector<ComPtr<ID3D12Resource>>& intermediaryResources)
 {
     CHECK(InitTextures(cmdList, intermediaryResources), false, "Unable to initialize textures");
@@ -262,6 +292,69 @@ bool TextureManager::InitDescriptors()
     return true;
 }
 
+void TextureManager::InitAllViews(uint32_t descriptorIndex)
+{
+    auto d3d = Direct3D::Get();
+    if (mTexturesToLoad[descriptorIndex]._InitializationType == TextureInitializationParams::Path)
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+        // Path-only textures are only shader resource views
+        mTextures[descriptorIndex].CreateShaderResourceView(
+            mSrvUavDescriptorHeap.Get(),
+            cpuHandle.Offset(std::get<SRV_INDEX>(mTextureIndexToHeapIndex[descriptorIndex]),
+                             d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>())
+        );
+    }
+    else if (mTexturesToLoad[descriptorIndex]._InitializationType == TextureInitializationParams::InitializationParams)
+    {
+        uint32_t createdViews = 0;
+        if (!(mTexturesToLoad[descriptorIndex]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
+        {
+            CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+            // Create SRV if needed
+            mTextures[descriptorIndex].CreateShaderResourceView(
+                mSrvUavDescriptorHeap.Get(),
+                cpuHandle.Offset(std::get<SRV_INDEX>(mTextureIndexToHeapIndex[descriptorIndex]),
+                                 d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>())
+            );
+            createdViews++;
+        }
+        if (mTexturesToLoad[descriptorIndex]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+        {
+            CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+            // Create UAV if needed
+            mTextures[descriptorIndex].CreateUnorederedAccessView(
+                mSrvUavDescriptorHeap.Get(),
+                cpuHandle.Offset(std::get<UAV_INDEX>(mTextureIndexToHeapIndex[descriptorIndex]),
+                                 d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>())
+            );
+            createdViews++;
+        }
+        if (mTexturesToLoad[descriptorIndex]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+        {
+            CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+            // Create RTV if needed
+            mTextures[descriptorIndex].CreateRenderTargetView(
+                mRtvDescriptorHeap.Get(),
+                cpuHandle.Offset(std::get<RTV_INDEX>(mTextureIndexToHeapIndex[descriptorIndex]),
+                                 d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>())
+            );
+            createdViews++;
+        }
+        if (mTexturesToLoad[descriptorIndex]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+        {
+            CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+            // Create DSV if needed
+            mTextures[descriptorIndex].CreateDepthStencilView(
+                mDsvDescriptorHeap.Get(),
+                cpuHandle.Offset(std::get<DSV_INDEX>(mTextureIndexToHeapIndex[descriptorIndex]),
+                                 d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_DSV>()));
+            createdViews++;
+        }
+        SHOWINFO("Created {} views for texture located at index {}", createdViews, descriptorIndex);
+    }
+}
+
 bool TextureManager::InitAllViews()
 {
     auto d3d = Direct3D::Get();
@@ -270,64 +363,7 @@ bool TextureManager::InitAllViews()
 
     for (unsigned int i = 0; i < mTextures.size(); ++i)
     {
-        if (mTexturesToLoad[i]._InitializationType == TextureInitializationParams::Path)
-        {
-            CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-            // Path-only textures are only shader resource views
-            mTextures[i].CreateShaderResourceView(
-                mSrvUavDescriptorHeap.Get(),
-                cpuHandle.Offset(std::get<SRV_INDEX>(mTextureIndexToHeapIndex[i]),
-                                 d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>())
-            );
-        }
-        else if (mTexturesToLoad[i]._InitializationType == TextureInitializationParams::InitializationParams)
-        {
-            uint32_t createdViews = 0;
-            if (!(mTexturesToLoad[i]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
-            {
-                CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-                // Create SRV if needed
-                mTextures[i].CreateShaderResourceView(
-                    mSrvUavDescriptorHeap.Get(),
-                    cpuHandle.Offset(std::get<SRV_INDEX>(mTextureIndexToHeapIndex[i]),
-                                     d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>())
-                );
-                createdViews++;
-            }
-            if (mTexturesToLoad[i]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
-            {
-                CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-                // Create UAV if needed
-                mTextures[i].CreateUnorederedAccessView(
-                    mSrvUavDescriptorHeap.Get(),
-                    cpuHandle.Offset(std::get<UAV_INDEX>(mTextureIndexToHeapIndex[i]), 
-                                     d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>())
-                );
-                createdViews++;
-            }
-            if (mTexturesToLoad[i]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-            {
-                CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-                // Create RTV if needed
-                mTextures[i].CreateRenderTargetView(
-                    mRtvDescriptorHeap.Get(),
-                    cpuHandle.Offset(std::get<RTV_INDEX>(mTextureIndexToHeapIndex[i]), 
-                                     d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_RTV>())
-                );
-                createdViews++;
-            }
-            if (mTexturesToLoad[i]._InitializationParams.resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
-            {
-                CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(mDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-                // Create DSV if needed
-                mTextures[i].CreateDepthStencilView(
-                    mDsvDescriptorHeap.Get(),
-                    cpuHandle.Offset(std::get<DSV_INDEX>(mTextureIndexToHeapIndex[i]), 
-                                     d3d->GetDescriptorIncrementSize<D3D12_DESCRIPTOR_HEAP_TYPE_DSV>()));
-                createdViews++;
-            }
-            SHOWINFO("Created {} views for texture located at index {}", createdViews, i);
-        }
+        InitAllViews(i);
     }
 
     SHOWINFO("Successfully created {} cbv / srv / uav", mNumCbvSrvUav);

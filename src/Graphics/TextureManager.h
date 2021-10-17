@@ -26,6 +26,12 @@ public:
                                 const D3D12_RESOURCE_STATES &state = D3D12_RESOURCE_STATE_GENERIC_READ,
                                 const D3D12_HEAP_FLAGS &heapFlags = D3D12_HEAP_FLAG_NONE,
                                 D3D12_CLEAR_VALUE *clearValue = nullptr);
+    bool UpdateTexture(uint32_t textureIndex, ID3D12GraphicsCommandList *cmdList, const std::string &path, ComPtr<ID3D12Resource> intermediaryResource);
+    bool UpdateTexture(uint32_t textureIndex, ID3D12GraphicsCommandList *cmdList, LPCWSTR path, ComPtr<ID3D12Resource> intermediaryResource);
+    bool UpdateTexture(uint32_t textureIndex, const D3D12_RESOURCE_DESC &resourceDesc, const D3D12_HEAP_PROPERTIES &heapProperties,
+                       const D3D12_RESOURCE_STATES &state = D3D12_RESOURCE_STATE_GENERIC_READ,
+                       const D3D12_HEAP_FLAGS &heapFlags = D3D12_HEAP_FLAG_NONE,
+                       D3D12_CLEAR_VALUE *clearValue = nullptr);
 
 public:
     bool CloseAddingTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources);
@@ -50,6 +56,8 @@ public:
 private:
     bool InitTextures(ID3D12GraphicsCommandList *cmdList, std::vector<ComPtr<ID3D12Resource>> &intermediaryResources);
     bool InitDescriptors();
+
+    void InitAllViews(uint32_t descriptorIndex);
 
     bool InitAllViews();
 

@@ -106,6 +106,20 @@ bool BlurFilter::Apply(ID3D12GraphicsCommandList *cmdList, uint32_t textureIndex
     return true;
 }
 
+bool BlurFilter::OnResize(uint32_t width, uint32_t height)
+{
+    CD3DX12_RESOURCE_DESC backbufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+        Direct3D::kBackbufferFormat, width / FrameResources::kBlurScale, height / FrameResources::kBlurScale, 1, 0, 1, 0,
+        D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    CD3DX12_HEAP_PROPERTIES defaultHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+    CHECK(TextureManager::Get()->UpdateTexture(mIntermediaryTextureIndex, backbufferDesc, defaultHeap,
+                                               D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_HEAP_FLAG_NONE),
+          false, "Unable to update blur texture");
+
+    return true;
+}
+
 Result<std::vector<float>> BlurFilter::GetGaussWeights(float sigma)
 {
     float twoSigmaSq = 2 * sigma * sigma;
