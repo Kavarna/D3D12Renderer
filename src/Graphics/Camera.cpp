@@ -1,7 +1,13 @@
 #include "Camera.h"
 
+void Camera::Init(unsigned int maxDirtyFrames, unsigned int constantBufferIndex)
+{
+    return UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+}
+
 void Camera::Create(const DirectX::XMFLOAT3 &position, float aspectRatio, float FOV, float nearZ, float farZ, float yaw, float pitch)
 {
+
     MarkUpdate();
 
     mPosition = DirectX::XMLoadFloat3(&position);
@@ -18,6 +24,7 @@ void Camera::Create(const DirectX::XMFLOAT3 &position, float aspectRatio, float 
     mPitch = pitch;
 
     mProjectionMatrix = DirectX::XMMatrixPerspectiveFovLH(mFOV, mAspectRatio, mNearZ, mFarZ);
+    Update(0.0f, 0.0f, 0.0f);
 }
 
 void Camera::Update(float dt, float mouseHorizontalMove, float mouseVerticalMove)

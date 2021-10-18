@@ -309,6 +309,7 @@ void Model::SetShouldRender(bool shouldRender)
 
 bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2])
 {
+	CHECK(mVertices.size() > 0 && mIndices.size() > 0, false, "Unable to initialize model's buffers, because there are no vertices / indices");
 	auto d3d = Direct3D::Get();
 	auto device = d3d->GetD3D12Device();
 	std::tie(mVertexBuffer, intermediaryResources[0]) =

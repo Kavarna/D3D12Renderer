@@ -45,7 +45,7 @@ bool PipelineManager::Init()
     return true;
 }
 
-auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>
+auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<ID3D12PipelineState *>
 {
     ID3D12PipelineState *pipeline = nullptr;
     ID3D12RootSignature *rootSignature = nullptr;
@@ -53,6 +53,7 @@ auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<std::tuple<
     if (auto pipelineIt = mPipelines.find(pipelineType); pipelineIt != mPipelines.end())
     {
         pipeline = (*pipelineIt).second.Get();
+        return pipeline;
     }
     else
     {
@@ -60,13 +61,17 @@ auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<std::tuple<
         return std::nullopt;
     }
 
+}
+
+auto PipelineManager::GetRootSignature(PipelineType pipelineType) -> Result<ID3D12RootSignature *>
+{
     if (auto rootSignatureTypeIt = mPipelineToRootSignature.find(pipelineType);
         rootSignatureTypeIt != mPipelineToRootSignature.end())
     {
         if (auto rootSignatureIt = mRootSignatures.find((*rootSignatureTypeIt).second);
             rootSignatureIt != mRootSignatures.end())
         {
-            rootSignature = (*rootSignatureIt).second.Get();
+            return (*rootSignatureIt).second.Get();
         }
         else
         {
@@ -80,8 +85,16 @@ auto PipelineManager::GetPipeline(PipelineType pipelineType)->Result<std::tuple<
         SHOWFATAL("Cannot find root signature type for pipeline type {}", PipelineTypeString[(int)pipelineType]);
         return std::nullopt;
     }
+}
 
-    std::tuple<ID3D12PipelineState *, ID3D12RootSignature *> result = { pipeline, rootSignature };
+auto PipelineManager::GetPipelineAndRootSignature(PipelineType pipelineType) -> Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>
+{
+    auto pipelineResult = GetPipeline(pipelineType);
+    CHECK(pipelineResult.Valid(), std::nullopt, "Unable to get pipeline {}", PipelineTypeString[(int)pipelineType]);
+    auto rootSignatureResult = GetRootSignature(pipelineType);
+    CHECK(rootSignatureResult.Valid(), std::nullopt, "Unable to get root signature for pipeline type {}", PipelineTypeString[(int)pipelineType]);
+    
+    std::tuple<ID3D12PipelineState *, ID3D12RootSignature *> result = { pipelineResult.Get(), rootSignatureResult.Get() };
     return result;
 }
 

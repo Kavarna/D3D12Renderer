@@ -39,11 +39,11 @@ bool BlurFilter::Apply(ID3D12GraphicsCommandList *cmdList, uint32_t textureIndex
     auto textureManager = TextureManager::Get();
     auto pipelineManager = PipelineManager::Get();
 
-    auto pipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::HorizontalBlur);
+    auto pipelineResult = PipelineManager::Get()->GetPipelineAndRootSignature(PipelineType::HorizontalBlur);
     CHECK(pipelineResult.Valid(), false, "Unable to retrieve horizontal pipeline and root signature");
     auto [horizontalPipeline, horizontalRootSignature] = pipelineResult.Get();
 
-    pipelineResult = PipelineManager::Get()->GetPipeline(PipelineType::VerticalBlur);
+    pipelineResult = PipelineManager::Get()->GetPipelineAndRootSignature(PipelineType::VerticalBlur);
     CHECK(pipelineResult.Valid(), false, "Unable to retrieve vertical pipeline and root signature");
     auto [verticalPipeline, verticalRootSignature] = pipelineResult.Get();
 

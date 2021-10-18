@@ -20,7 +20,7 @@ Result<uint32_t> TextureManager::AddTexture(LPCWSTR path)
     mTexturesToLoad.emplace_back(path);
 
     uint32_t textureIndex = mNumTextures++;
-    SHOWINFO("Created SRV with descriptor {}", textureIndex);
+    SHOWINFO("Will create SRV with descriptor {}", textureIndex);
 
     mTextureIndexToHeapIndex[textureIndex] = { mNumCbvSrvUav++, -1, -1, -1 };
 

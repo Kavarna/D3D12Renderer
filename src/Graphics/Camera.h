@@ -4,15 +4,16 @@
 
 #include <Oblivion.h>
 #include "Utils/UpdateObject.h"
-
+#include "Interfaces/ICamera.h"
 
 OBLIVION_ALIGN(16)
-class Camera : public UpdateObject
+class Camera : public UpdateObject, public ICamera
 {
 public:
     Camera() = default;
 
 public:
+    void Init(unsigned int maxDirtyFrames, unsigned int constantBufferIndex);
     void Create(const DirectX::XMFLOAT3& position, float aspectRatio,
                 float FOV = DirectX::XM_PIDIV4, float nearZ = 0.1f, float farZ = 1000.f,
                 float yaw = 0.0f, float pitch = 0.0f);

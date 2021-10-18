@@ -34,7 +34,9 @@ public:
     bool Init();
 
 public:
-    auto GetPipeline(PipelineType pipeline)->Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>;
+    auto GetPipeline(PipelineType pipeline)->Result<ID3D12PipelineState *>;
+    auto GetRootSignature(PipelineType pipeline)->Result<ID3D12RootSignature *>;
+    auto GetPipelineAndRootSignature(PipelineType pipeline)->Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>;
 
 private:
     bool InitRootSignatures();

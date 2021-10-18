@@ -7,6 +7,7 @@
 #include "Camera.h"
 #include "SceneLight.h"
 #include "BlurFilter.h"
+#include "OrthographicCamera.h"
 
 #include "Keyboard.h"
 #include "Mouse.h"
