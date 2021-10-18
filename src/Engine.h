@@ -11,16 +11,35 @@
 #include "Keyboard.h"
 #include "Mouse.h"
 
-class Application
+class Engine
 {
     static constexpr const auto kMINIMUM_WINDOW_SIZE = 200;
 public:
-    Application();
-    ~Application() = default;
+    Engine();
+    ~Engine() = default;
 
 public:
     bool Init(HINSTANCE hInstance);
     void Run();
+
+protected:
+    virtual bool OnInit(ID3D12GraphicsCommandList *initializationCmdList, ID3D12CommandAllocator *cmdAllocator) = 0;
+    virtual bool OnUpdate(FrameResources *frameResources, float dt) = 0;
+    virtual bool OnRender(ID3D12GraphicsCommandList *cmdList, FrameResources* frameResources) = 0;
+    virtual bool OnRenderGUI() = 0;
+    virtual bool OnResize() = 0;
+
+    virtual ID3D12PipelineState *GetBeginFramePipeline() = 0;
+
+    virtual uint32_t GetModelCount() = 0;
+
+protected:
+    std::unique_ptr<DirectX::Mouse> mMouse;
+    std::unique_ptr<DirectX::Keyboard> mKeyboard;
+
+    ComPtr<ID3D12Fence> mFence;
+    uint64_t mCurrentFrame = 0;
+    unsigned int mClientWidth = 800, mClientHeight = 600;
 
 private:
     bool InitWindow();
@@ -35,16 +54,11 @@ private:
 private:
     bool InitD3D();
     bool InitInput();
-    bool InitModels();
     bool InitFrameResources();
     bool InitImgui();
 
 private:
-    void ReactToKeyPresses(float dt);
-    void UpdateModels();
-    void UpdatePassBuffers();
-    void RenderModels();
-    void RenderGUI();
+    bool RenderGUI();
 
 private:
     HINSTANCE mInstance = nullptr;
@@ -57,31 +71,9 @@ private:
 
     ComPtr<ID3D12DescriptorHeap> mImguiDescriptorHeap;
 
-    Camera mCamera;
-
-    ComPtr<ID3D12Fence> mFence;
-    std::vector<Model> mModels;
-    Model mSquare;
-
-    BlurFilter mBlurFilter;
-
     std::array<FrameResources, Direct3D::kBufferCount> mFrameResources;
-    FrameResources *mCurrentFrameResource;
+    FrameResources *mCurrentFrameResource = nullptr;
     uint32_t mCurrentFrameResourceIndex = 0;
-
-    SceneLight mSceneLight;
-
-    uint64_t mCurrentFrame = 0;
-
-    D3D12_VIEWPORT mViewport, mBlurViewport;
-    D3D12_RECT mScissors, mBlurScissors;
-private:
-    unsigned int mClientWidth = 800, mClientHeight = 600;
-    bool mMenuActive = true;
-
-private:
-    std::unique_ptr<DirectX::Mouse> mMouse;
-    std::unique_ptr<DirectX::Keyboard> mKeyboard;
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);

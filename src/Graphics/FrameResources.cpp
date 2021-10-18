@@ -11,15 +11,22 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
     CHECK(allocatorResult.Valid(), false, "Unable to create a command allocator for frame resources");
     CommandAllocator = allocatorResult.Get();
 
-    CHECK(PerObjectBuffers.Init(numObjects, true), false,
-          "Unable to initialize per object buffer with {} elements", numObjects);
+    if (numObjects > 0)
+    {
+        CHECK(PerObjectBuffers.Init(numObjects, true), false,
+              "Unable to initialize per object buffer with {} elements", numObjects);
+    }
+    if (numPasses > 0)
+    {
+        CHECK(PerPassBuffers.Init(numPasses, true), false,
+              "Unable to initialize per pass buffer with {} elements", numPasses);
+    }
 
-    CHECK(PerPassBuffers.Init(numPasses, true), false,
-          "Unable to initialize per pass buffer with {} elements", numPasses);
-
-    CHECK(MaterialsBuffers.Init(numMaterials, true), false,
-          "Unable to initialize material buffer with {} elements", numMaterials);
-
+    if (numMaterials > 0)
+    {
+        CHECK(MaterialsBuffers.Init(numMaterials, true), false,
+              "Unable to initialize material buffer with {} elements", numMaterials);
+    }
     CHECK(LightsBuffer.Init(1, true), false,
           "Unable to initialize lights buffer with {} elements", 1);
 

@@ -1,4 +1,5 @@
-#include "Application.h"
+#if RUN_ENGINE
+#include "Engine.h"
 
 #include <dxgidebug.h>
 
@@ -24,3 +25,4 @@ int main(int argc, char *argv[])
     Logger::Close();
     return 0;
 }
+#endif

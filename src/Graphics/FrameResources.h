@@ -55,7 +55,6 @@ struct FrameResources
 {
     static constexpr const auto kBlurScale = 4;
 
-
     FrameResources() = default;
     ~FrameResources() = default;
 
