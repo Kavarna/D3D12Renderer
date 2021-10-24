@@ -45,12 +45,12 @@ public:
 
     void CopyData(T* data, unsigned int index = 0)
     {
-        memcpy((mMappedData + index), data, mElementSize);
+        memcpy((char *)mMappedData + index * GetElementSize(), data, mElementSize);
     }
 
     T *GetMappedMemory(unsigned int index = 0)
     {
-        return (T *)(mMappedData +index);
+        return (T *)((char *)mMappedData + index * GetElementSize());
     }
 
     ID3D12Resource *GetResource() const

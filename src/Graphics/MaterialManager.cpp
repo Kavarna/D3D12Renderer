@@ -23,7 +23,7 @@ MaterialManager::Material *MaterialManager::AddDefaultMaterial(unsigned int maxD
     defaultMaterial.FresnelR0 = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
     defaultMaterial.MaterialTransform = DirectX::XMMatrixIdentity();
     defaultMaterial.Shininess = 64.f;
-    defaultMaterial.textureIndex = 1;
+    defaultMaterial.textureIndex = -1;
 
     return AddMaterial(maxDirtyFrames, "DefaultMaterial", defaultMaterial);
 }
