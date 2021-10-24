@@ -5,6 +5,11 @@ SceneLight::SceneLight(unsigned int maxDirtyFrames):
 {
 }
 
+void SceneLight::Init(unsigned int maxDirtyFrames, unsigned int cbIndex)
+{
+    UpdateObject::Init(maxDirtyFrames, cbIndex);
+}
+
 void SceneLight::SetAmbientColor(float r, float g, float b, float a)
 {
     SetAmbientColor({ r, g, b, a });

@@ -49,8 +49,10 @@ void Engine::Run()
         }
         else
         {
+            // SHOWINFO("~~~~~~~~~~~~~~~~~~~~ FRAME {} ~~~~~~~~~~~~~~~~~~~~", mCurrentFrame);
             CHECKBK(OnUpdate(), "Failed to update frame {}", mCurrentFrame);
             CHECKBK(OnRender(), "Failed to render frame {}", mCurrentFrame);
+            // SHOWINFO("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
     }
 
@@ -73,7 +75,7 @@ bool Engine::InitWindow()
     int screenSizeY = GetSystemMetrics(SM_CYSCREEN);
 
     RECT windowRect = { 0, 0, (LONG)mClientWidth, (LONG)mClientHeight };
-    AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+    AdjustWindowRect(&windowRect, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX, FALSE);
 
     int windowWidth = windowRect.right - windowRect.left;
     int windowHeight = windowRect.bottom - windowRect.top;
@@ -82,7 +84,7 @@ bool Engine::InitWindow()
     int windowY = (int)std::max({ 0.0f, (screenSizeY - windowHeight) / 2.0f });
 
     mWindow = CreateWindow(ENGINE_NAME, APPLICATION_NAME,
-                           WS_OVERLAPPEDWINDOW, windowX, windowY,
+                           WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX, windowX, windowY,
                            windowWidth, windowHeight, nullptr, nullptr, mInstance,
                            this);
     CHECK(mWindow, false, "Unable to create window");
@@ -242,10 +244,11 @@ bool Engine::InitFrameResources()
     uint32_t numModels = GetModelCount();
     uint32_t numPasses = 1;
     uint32_t numMaterials = MaterialManager::Get()->GetNumMaterials();
+    auto instances = GetInstanceCount();
 
     for (unsigned int i = 0; i < mFrameResources.size(); ++i)
     {
-        CHECK(mFrameResources[i].Init(numModels, numPasses, numMaterials, mClientWidth, mClientHeight),
+        CHECK(mFrameResources[i].Init(numModels, numPasses, numMaterials, mClientWidth, mClientHeight, instances),
               false, "Unable to init frame resource at index {}", i);
     }
 

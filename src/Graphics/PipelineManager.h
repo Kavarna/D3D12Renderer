@@ -8,10 +8,12 @@
 enum class PipelineType
 {
     SimpleColor = 0, MaterialLight, RawTexture, HorizontalBlur, VerticalBlur,
+    InstancedMaterialLight,
 };
 static constexpr const char *PipelineTypeString[] =
 {
     "SimpleColor", "MaterialLight", "RawTexture", "HorizontalBlur", "VerticalBlur",
+    "InstancedMaterialLight",
 };
 
 enum class RootSignatureType
@@ -54,6 +56,7 @@ private:
     bool InitMaterialLightPipeline();
     bool InitRawTexturePipeline();
     bool InitBlurPipelines();
+    bool InitInstancedMaterialLightPipeline();
 
 private:
     bool mCreated = false;

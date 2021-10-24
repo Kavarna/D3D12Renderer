@@ -21,6 +21,9 @@ public:
 
     void Update(float dt, float mouseHorizontalMove, float mouseVerticalMove);
 
+    DirectX::XMFLOAT2 ConvertCoordinatesToNDC(const DirectX::XMFLOAT2& coordinates);
+    DirectX::XMFLOAT2 ConvertCoordinatesToNDCAdapted(const DirectX::XMFLOAT2 &coordinates);
+
     const DirectX::XMMATRIX &__vectorcall GetView() const;
     const DirectX::XMMATRIX &__vectorcall GetProjection() const;
 

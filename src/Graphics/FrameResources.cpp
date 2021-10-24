@@ -3,7 +3,8 @@
 #include "Direct3D.h"
 #include "TextureManager.h"
 
-bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials, uint32_t width, uint32_t height)
+bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials, uint32_t width, uint32_t height,
+                          const std::unordered_map<void*, uint32_t>& instancesCountPerObject)
 {
     auto d3d = Direct3D::Get();
 
@@ -57,6 +58,13 @@ bool FrameResources::Init(uint32_t numObjects, uint32_t numPasses, uint32_t numM
     CHECK(indexResult.Valid(), false, "Cannot create depth stencil view");
     BlurDepthStencilIndex = indexResult.Get();
 
+    for (const auto &it : instancesCountPerObject)
+    {
+        CHECK(InstanceBuffer[std::get<0>(it)].Init(it.second), false,
+              "Unable to create instance buffer ({} instances) for object {}", std::get<1>(it), std::get<0>(it));
+    }
+
+    SHOWINFO("Successfully created a frame resource");
     return true;
 }
 

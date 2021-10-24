@@ -36,6 +36,21 @@ public:
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path);
 
+    Result<uint32_t> AddInstance(const DirectX::XMMATRIX &worldMatrix = DirectX::XMMatrixIdentity(),
+                                 const DirectX::XMMATRIX &texMatrix = DirectX::XMMatrixIdentity(),
+                                 void* Context = nullptr);
+    void ClearInstances();
+    uint32_t GetInstanceCount() const;
+
+    uint32_t PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &)>,
+                              std::unordered_map<void *, UploadBuffer<InstanceInfo>> &);
+    uint32_t PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &, void* Context)>,
+                              std::unordered_map<void *, UploadBuffer<InstanceInfo>> &);
+    void BindInstancesBuffer(ID3D12GraphicsCommandList *cmdList, uint32_t instanceCount,
+                             const std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer);
+
+    void CloseAddingInstances();
+
     bool ShouldRender() const;
     void SetShouldRender(bool shouldRender);
 
@@ -50,18 +65,19 @@ public:
     uint32_t GetBaseVertexLocation() const;
     uint32_t GetStartIndexLocation() const;
 
+    void SetMaterial(MaterialManager::Material *);
     MaterialManager::Material const *GetMaterial() const;
 
-    const DirectX::XMMATRIX &__vectorcall GetWorld() const;
-    const DirectX::XMMATRIX &__vectorcall GetTexWorld() const;
+    const DirectX::XMMATRIX &__vectorcall GetWorld(unsigned int instanceID = 0) const;
+    const DirectX::XMMATRIX &__vectorcall GetTexWorld(unsigned int instanceID = 0) const;
 
-    void Identity();
-    void Translate(float x, float y, float z);
-    void RotateX(float theta);
-    void RotateY(float theta);
-    void RotateZ(float theta);
-    void Scale(float scaleFactor);
-    void Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ);
+    void Identity(unsigned int instanceID = 0);
+    void Translate(float x, float y, float z, unsigned int instanceID = 0);
+    void RotateX(float theta, unsigned int instanceID = 0);
+    void RotateY(float theta, unsigned int instanceID = 0);
+    void RotateZ(float theta, unsigned int instanceID = 0);
+    void Scale(float scaleFactor, unsigned int instanceID = 0);
+    void Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ, unsigned int instanceID = 0);
 
 private:
     bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
@@ -94,8 +110,21 @@ private:
     bool CreateSquare();
 
 private:
-    DirectX::XMMATRIX mWorld = DirectX::XMMatrixIdentity();
-    DirectX::XMMATRIX mTexWorld = DirectX::XMMatrixIdentity();
+    bool mCanAddInstances = true;
+    
+    struct ModelInstanceInfo
+    {
+        ModelInstanceInfo(const InstanceInfo &instanceInfo, void *Context = nullptr):
+            instanceInfo(instanceInfo), Context(Context)
+        {
+        }
+
+        InstanceInfo instanceInfo;
+        void *Context;
+    };
+
+    std::vector<ModelInstanceInfo> mInstancesInfo;
+
     RenderParameters mInfo;
     MaterialManager::Material *mMaterial = nullptr;
     bool mShouldRender = false;

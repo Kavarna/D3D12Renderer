@@ -38,19 +38,19 @@ public:
             nullptr, IID_PPV_ARGS(&mMappedResource)), false);
 
 
-        CHECK_HR(mMappedResource->Map(0, nullptr, &mMappedData), false);
+        CHECK_HR(mMappedResource->Map(0, nullptr, (void **)&mMappedData), false);
 
         return true;
     }
 
     void CopyData(T* data, unsigned int index = 0)
     {
-        memcpy((char *)mMappedData + mElementSize * index, &data, mElementSize);
+        memcpy((mMappedData + index), data, mElementSize);
     }
 
     T *GetMappedMemory(unsigned int index = 0)
     {
-        return (T *)((char *)mMappedData + mElementSize * index);
+        return (T *)(mMappedData +index);
     }
 
     ID3D12Resource *GetResource() const
@@ -96,6 +96,6 @@ private:
 
     ComPtr<ID3D12Resource> mMappedResource;
 
-    void *mMappedData;
+    T *mMappedData;
 };
 

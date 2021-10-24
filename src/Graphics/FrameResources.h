@@ -51,6 +51,12 @@ struct MaterialConstants
     int textureIndex;
 };
 
+struct InstanceInfo
+{
+    DirectX::XMMATRIX WorldMatrix;
+    DirectX::XMMATRIX TexWorld;
+};
+
 struct FrameResources
 {
     static constexpr const auto kBlurScale = 4;
@@ -58,7 +64,8 @@ struct FrameResources
     FrameResources() = default;
     ~FrameResources() = default;
 
-    bool Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials, uint32_t width, uint32_t height);
+    bool Init(uint32_t numObjects, uint32_t numPasses, uint32_t numMaterials, uint32_t width, uint32_t height,
+              const std::unordered_map<void *, uint32_t> &instancesCountPerObject);
     bool OnResize(uint32_t width, uint32_t height);
 
     ComPtr<ID3D12CommandAllocator> CommandAllocator;
@@ -67,6 +74,9 @@ struct FrameResources
     UploadBuffer<PerPassInfo> PerPassBuffers;
     UploadBuffer<MaterialConstants> MaterialsBuffers;
     UploadBuffer<LightsBuffer> LightsBuffer;
+    
+    // These should be unique per object, so we'll just use object's addres as key
+    std::unordered_map<void*, UploadBuffer<InstanceInfo>> InstanceBuffer;
 
     uint32_t BlurRenderTargetIndex;
     uint32_t BlurDepthStencilIndex;

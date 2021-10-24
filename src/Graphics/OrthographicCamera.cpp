@@ -43,6 +43,25 @@ void OrthographicCamera::Update(float dt, float mouseHorizontalMove, float mouse
     mViewMatrix = DirectX::XMMatrixLookToLH(mPosition, mForwadDirection, mUpDirection);
 }
 
+DirectX::XMFLOAT2 OrthographicCamera::ConvertCoordinatesToNDC(const DirectX::XMFLOAT2 &coordinates)
+{
+    DirectX::XMFLOAT2 result = {};
+
+    result.x = (coordinates.x / mWidth * 2) - 1.f;
+    result.y = -((coordinates.y / mHeight * 2) - 1.f);
+
+    return result;
+}
+
+DirectX::XMFLOAT2 OrthographicCamera::ConvertCoordinatesToNDCAdapted(const DirectX::XMFLOAT2 &coordinates)
+{
+    DirectX::XMFLOAT2 result = ConvertCoordinatesToNDC(coordinates);
+    result.x *= (mWidth / 2.f);
+    result.y *= (mHeight / 2.f);
+
+    return result;
+}
+
 
 const DirectX::XMMATRIX &__vectorcall OrthographicCamera::GetView() const
 {

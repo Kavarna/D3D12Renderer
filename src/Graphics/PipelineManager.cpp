@@ -116,6 +116,7 @@ bool PipelineManager::InitPipelines()
     CHECK(InitMaterialLightPipeline(), false, "Unable to initialize material light pipeline");
     CHECK(InitRawTexturePipeline(), false, "Unable to initialize raw texture pipeline");
     CHECK(InitBlurPipelines(), false, "Unable to initialize blur pipelines");
+    CHECK(InitInstancedMaterialLightPipeline(), false, "Unable to initialize material light pipeline");
 
     SHOWINFO("Successfully initialized all pipelines");
     return true;
@@ -449,6 +450,88 @@ bool PipelineManager::InitBlurPipelines()
     mShaders[type].push_back(verticalBlurComputeShader);
     mPipelineToRootSignature[type] = rootSignatureType;
 
+    return true;
+}
+
+bool PipelineManager::InitInstancedMaterialLightPipeline()
+{
+    auto d3d = Direct3D::Get();
+    PipelineType type = PipelineType::InstancedMaterialLight;
+    RootSignatureType rootSignatureType = RootSignatureType::ObjectFrameMaterialLights;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC materialLightPipeline = {};
+
+    materialLightPipeline.NodeMask = 0;
+    materialLightPipeline.BlendState = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT());
+    materialLightPipeline.CachedPSO.CachedBlobSizeInBytes = 0;
+    materialLightPipeline.CachedPSO.pCachedBlob = nullptr;
+    materialLightPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+    materialLightPipeline.DepthStencilState.StencilEnable = FALSE;
+    materialLightPipeline.DepthStencilState.DepthEnable = TRUE;
+    materialLightPipeline.DSVFormat = Direct3D::kDepthStencilFormat;
+    materialLightPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+    materialLightPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+    materialLightPipeline.NumRenderTargets = 1;
+    materialLightPipeline.RTVFormats[0] = Direct3D::kBackbufferFormat;
+    materialLightPipeline.SampleDesc.Count = 1;
+    materialLightPipeline.SampleDesc.Quality = 0;
+    materialLightPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    materialLightPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    materialLightPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+
+    auto rootSignature = mRootSignatures.find(rootSignatureType);
+    CHECK(!(rootSignature == mRootSignatures.end()), false,
+          "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
+    materialLightPipeline.pRootSignature = rootSignature->second.Get();
+
+    // Init input element desc
+    auto elementDesc = PositionNormalTexCoordVertex::GetInputElementDesc();
+    std::vector<D3D12_INPUT_ELEMENT_DESC> inputElements(elementDesc.begin(), elementDesc.end());
+    D3D12_INPUT_ELEMENT_DESC worldMatrix[4], texWorldMatrix[4];
+    worldMatrix[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    worldMatrix[0].Format = DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT;
+    worldMatrix[0].InputSlot = 1;
+    worldMatrix[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION::D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+    worldMatrix[0].InstanceDataStepRate = 1;
+    worldMatrix[0].SemanticIndex = 0;
+    worldMatrix[0].SemanticName = "WORLDMATRIX";
+    texWorldMatrix[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    texWorldMatrix[0].Format = DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT;
+    texWorldMatrix[0].InputSlot = 1;
+    texWorldMatrix[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION::D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+    texWorldMatrix[0].InstanceDataStepRate = 1;
+    texWorldMatrix[0].SemanticIndex = 0;
+    texWorldMatrix[0].SemanticName = "TEXWORLDMATRIX";
+    for (int i = 1; i < 4; ++i)
+    {
+        worldMatrix[i] = worldMatrix[0];
+        worldMatrix[i].SemanticIndex = i;
+        texWorldMatrix[i] = texWorldMatrix[0];
+        texWorldMatrix[i].SemanticIndex = i;
+    }
+    std::copy(std::begin(worldMatrix), std::end(worldMatrix), std::back_inserter(inputElements));
+    std::copy(std::begin(texWorldMatrix), std::end(texWorldMatrix), std::back_inserter(inputElements));
+
+    materialLightPipeline.InputLayout.NumElements = (uint32_t)inputElements.size();
+    materialLightPipeline.InputLayout.pInputElementDescs = inputElements.data();
+
+    ComPtr<ID3DBlob> vertexShader, pixelShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\InstancedMaterialLightPipeline_VertexShader.cso", &vertexShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\InstancedMaterialLightPipeline_PixelShader.cso", &pixelShader), false);
+
+    materialLightPipeline.VS.BytecodeLength = vertexShader->GetBufferSize();
+    materialLightPipeline.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+    materialLightPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
+    materialLightPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+
+    auto pipeline = d3d->CreatePipelineState(materialLightPipeline);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(vertexShader);
+    mShaders[type].push_back(pixelShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
+    SHOWINFO("Successfully initialized material light pipeline");
     return true;
 }
 

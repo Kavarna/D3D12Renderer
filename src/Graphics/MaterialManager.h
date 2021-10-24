@@ -17,7 +17,13 @@ public:
                  std::string materialName, const MaterialConstants &info):
             UpdateObject(maxDirtyFrames, cbIndex), Name(materialName), Info(info)
         {
+            MarkUpdate();
         };
+
+        MaterialConstants GetMaterialConstants() const
+        {
+            return Info;
+        }
 
         unsigned int GetTextureIndex() const
         {
@@ -35,8 +41,11 @@ public:
 
 public:
     Material *AddMaterial(unsigned int maxDirtyFrames, const std::string &materialName, const MaterialConstants &);
+    Material *AddDefaultMaterial(unsigned int maxDirtyFrames);
     void UpdateMaterialsBuffer(UploadBuffer<MaterialConstants> &materialsBuffer);
     
+    Material *GetMaterial(const std::string& material);
+
     uint32_t GetNumMaterials() const;
     void CloseAddingMaterials();
 

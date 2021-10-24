@@ -36,59 +36,64 @@ uint32_t Model::GetStartIndexLocation() const
 	return mInfo.StartIndexLocation;
 }
 
+void Model::SetMaterial(MaterialManager::Material * newMaterial)
+{
+	mMaterial = newMaterial;
+}
+
 MaterialManager::Material const *Model::GetMaterial() const
 {
 	return mMaterial;
 }
 
-const DirectX::XMMATRIX &__vectorcall Model::GetWorld() const
+const DirectX::XMMATRIX &__vectorcall Model::GetWorld(unsigned int instanceID) const
 {
-	return mWorld;
+	return mInstancesInfo[instanceID].instanceInfo.WorldMatrix;
 }
 
-const DirectX::XMMATRIX &__vectorcall Model::GetTexWorld() const
+const DirectX::XMMATRIX &__vectorcall Model::GetTexWorld(unsigned int instanceID) const
 {
-	return mTexWorld;
+	return mInstancesInfo[instanceID].instanceInfo.TexWorld;
 }
 
-void Model::Identity()
+void Model::Identity(unsigned int instanceID)
 {
-	mWorld = DirectX::XMMatrixIdentity();
+	mInstancesInfo[instanceID].instanceInfo.WorldMatrix = DirectX::XMMatrixIdentity();
 	MarkUpdate();
 }
 
-void Model::Translate(float x, float y, float z)
+void Model::Translate(float x, float y, float z, unsigned int instanceID)
 {
-	mWorld *= DirectX::XMMatrixTranslation(x, y, z);
+	mInstancesInfo[instanceID].instanceInfo.WorldMatrix *= DirectX::XMMatrixTranslation(x, y, z);
 	MarkUpdate();
 }
 
-void Model::RotateX(float theta)
+void Model::RotateX(float theta, unsigned int instanceID)
 {
-	mWorld = DirectX::XMMatrixRotationX(theta) * mWorld;
+	mInstancesInfo[instanceID].instanceInfo.WorldMatrix *= DirectX::XMMatrixRotationX(theta);
 	MarkUpdate();
 }
 
-void Model::RotateY(float theta)
+void Model::RotateY(float theta, unsigned int instanceID)
 {
-	mWorld = DirectX::XMMatrixRotationY(theta) * mWorld;
+	mInstancesInfo[instanceID].instanceInfo.WorldMatrix *= DirectX::XMMatrixRotationY(theta);
 	MarkUpdate();
 }
 
-void Model::RotateZ(float theta)
+void Model::RotateZ(float theta, unsigned int instanceID)
 {
-	mWorld = DirectX::XMMatrixRotationZ(theta) * mWorld;
+	mInstancesInfo[instanceID].instanceInfo.WorldMatrix *= DirectX::XMMatrixRotationZ(theta);
 	MarkUpdate();
 }
 
-void Model::Scale(float scaleFactor)
+void Model::Scale(float scaleFactor, unsigned int instanceID)
 {
 	Scale(scaleFactor, scaleFactor, scaleFactor);
 }
 
-void Model::Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ)
+void Model::Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ, unsigned int instanceID)
 {
-	mWorld = DirectX::XMMatrixScaling(scaleFactorX, scaleFactorY, scaleFactorZ) * mWorld;
+	mInstancesInfo[instanceID].instanceInfo.WorldMatrix *= DirectX::XMMatrixScaling(scaleFactorX, scaleFactorY, scaleFactorZ);
 	MarkUpdate();
 }
 
@@ -265,6 +270,7 @@ bool Model::Create(ModelType type)
 			SHOWFATAL("Model type {} is not a valid model", (int)type);
 			return false;
 	}
+	AddInstance();
 
     return true;
 }
@@ -281,6 +287,7 @@ bool Model::Create(const std::string &path)
 
 	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,
 		  "Unable to load model located at path {}", path);
+	AddInstance();
 
 	return true;
 }
@@ -295,6 +302,99 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
 	return Create(path);
+}
+
+Result<uint32_t> Model::AddInstance(const DirectX::XMMATRIX &worldMatrix, const DirectX::XMMATRIX &texMatrix, void* Context)
+{
+	CHECK(mCanAddInstances, std::nullopt, "Model stopped for adding instances...");
+	
+	uint32_t start = (uint32_t)mInstancesInfo.size();
+
+	mInstancesInfo.push_back(ModelInstanceInfo({ worldMatrix, texMatrix }, Context));
+
+	return start;
+}
+
+void Model::ClearInstances()
+{
+	mInstancesInfo.clear();
+}
+
+uint32_t Model::PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &)> func,
+								 std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer)
+{
+	if (auto instanceIt = instancesBuffer.find((void *)this); instanceIt != instancesBuffer.end())
+	{
+		auto& instanceInfo = (*instanceIt).second;
+
+		unsigned int bufferIndex = 0;
+		for (auto &it : mInstancesInfo)
+		{
+			if (func(it.instanceInfo.WorldMatrix, it.instanceInfo.TexWorld))
+			{
+				instanceInfo.CopyData(&it.instanceInfo, bufferIndex++);
+			}
+		}
+		return bufferIndex;
+	}
+	else
+	{
+		SHOWWARNING("Attempting to prepare instances on a model that is not in the instances buffer");
+		return 0;
+	}
+}
+
+uint32_t Model::PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &, void *Context)> func,
+								 std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer)
+{
+	if (auto instanceIt = instancesBuffer.find((void *)this); instanceIt != instancesBuffer.end())
+	{
+		auto &instanceInfo = (*instanceIt).second;
+
+		unsigned int bufferIndex = 0;
+		for (auto &it : mInstancesInfo)
+		{
+			if (func(it.instanceInfo.WorldMatrix, it.instanceInfo.TexWorld, it.Context))
+			{
+				instanceInfo.CopyData(&it.instanceInfo, bufferIndex++);
+			}
+		}
+		return bufferIndex;
+	}
+	else
+	{
+		SHOWWARNING("Attempting to prepare instances on a model that is not in the instances buffer");
+		return 0;
+	}
+}
+
+void Model::BindInstancesBuffer(ID3D12GraphicsCommandList *cmdList, uint32_t instanceCount,
+								const std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer)
+{
+	if (auto it = instancesBuffer.find((void *)this); it != instancesBuffer.end())
+	{
+		auto& buffer = (*it).second;
+		D3D12_VERTEX_BUFFER_VIEW vbView = {};
+		vbView.BufferLocation = buffer.GetGPUVirtualAddress();
+		vbView.SizeInBytes = sizeof(InstanceInfo) * instanceCount;
+		vbView.StrideInBytes = sizeof(InstanceInfo);
+		cmdList->IASetVertexBuffers(1, 1, &vbView);
+	}
+	else
+	{
+		SHOWWARNING("Attempting to bind instances buffer on a model that is not in the instances buffer");
+		return;
+	}
+}
+
+uint32_t Model::GetInstanceCount() const
+{
+	return (uint32_t)mInstancesInfo.size();
+}
+
+void Model::CloseAddingInstances()
+{
+	mCanAddInstances = false;
 }
 
 bool Model::ShouldRender() const
