@@ -267,7 +267,7 @@ bool Model::Create(ModelType type)
 			break;
 		// TODO: add more default shapes
 		default:
-			SHOWFATAL("Model type {} is not a valid model", (int)type);
+			SHOWFATAL("Model type {} is not a valid model for Create(ModelType) function. Try using another specialized function", (int)type);
 			return false;
 	}
 	AddInstance();
@@ -517,3 +517,89 @@ bool Model::CreateSquare()
 
 	return true;
 }
+
+bool Model::CreateGrid(const GridInitializationInfo &initInfo)
+{
+	std::string name = fmt::format("Grid_{}_{}_{}_{}", initInfo.N, initInfo.M, initInfo.width, initInfo.depth);
+	if (auto gridIt = mModelsRenderParameters.find(name); gridIt != mModelsRenderParameters.end())
+	{
+		mInfo = (*gridIt).second;
+		SHOWWARNING("Grid was already created once. You should be using instancing instead of creating multiple models");
+		return true;
+	}
+
+	float halfWidth = 0.5f * initInfo.width;
+	float halfDepth = 0.5f * initInfo.depth;
+
+	float dx = initInfo.width / (initInfo.N - 1);
+	float dz = initInfo.depth / (initInfo.M - 1);
+
+	float du = 1.0f / (initInfo.N - 1);
+	float dv = 1.0f / (initInfo.M - 1);
+
+	uint32_t vertexCount = initInfo.M * initInfo.N;
+	uint32_t faceCount = (initInfo.M - 1) * (initInfo.N - 1) * 2;
+
+	std::vector<Vertex> vertices(vertexCount);
+	std::vector<uint32_t> indices(faceCount * 3);
+
+	for (uint32_t i = 0; i < initInfo.M; ++i)
+	{
+		float z = halfDepth - i * dz;
+		for (uint32_t j = 0; j < initInfo.N; ++j)
+		{
+			float x = -halfWidth + j * dx;
+
+			vertices[i * initInfo.N + j].Position = DirectX::XMFLOAT3(x, 0.0f, z);
+			vertices[i * initInfo.N + j].Normal = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+			vertices[i * initInfo.N + j].TexCoord.x = du;
+			vertices[i * initInfo.N + j].TexCoord.y = dv;
+		}
+	}
+
+	uint32_t k = 0;
+	for (uint32_t i = 0; i < initInfo.M - 1; ++i)
+	{
+		for (uint32_t j = 0; j < initInfo.N - 1; ++j)
+		{
+			indices[k] = i * initInfo.N + j;
+			indices[k + 1] = i * initInfo.N + j + 1;
+			indices[k + 2] = (i + 1) * initInfo.N + j + 1;
+
+			indices[k + 3] = i * initInfo.N + j;
+			indices[k + 4] = (i + 1) * initInfo.N + j + 1;
+			indices[k + 5] = (i + 1) * initInfo.N + j;
+
+			k += 6;
+		}
+	}
+
+	mModelsRenderParameters[name].BaseVertexLocation = (uint32_t)mVertices.size();
+	mModelsRenderParameters[name].StartIndexLocation = (uint32_t)mIndices.size();
+	mModelsRenderParameters[name].VertexCount = (uint32_t)vertices.size();
+	mModelsRenderParameters[name].IndexCount = (uint32_t)indices.size();
+
+	mVertices.reserve(mVertices.size() + vertices.size());
+	std::move(std::begin(vertices), std::end(vertices), std::back_inserter(mVertices));
+
+	mIndices.reserve(mIndices.size() + indices.size());
+	std::move(std::begin(indices), std::end(indices), std::back_inserter(mIndices));
+
+	mInfo = mModelsRenderParameters[name];
+
+	return true;
+}
+
+template <typename InitializationInfo>
+bool Model::Create(ModelType type, const InitializationInfo & initInfo)
+{
+	if constexpr (std::is_same_v<InitializationInfo, GridInitializationInfo>)
+	{
+		AddInstance();
+		return CreateGrid(initInfo);
+	}
+	return true;
+}
+
+template bool Model::Create(ModelType type, const Model::GridInitializationInfo &);

@@ -29,7 +29,7 @@ protected:
     virtual bool OnRender(ID3D12GraphicsCommandList *cmdList, FrameResources* frameResources) = 0;
     virtual bool OnRenderGUI() = 0;
     virtual bool OnResize() = 0;
-    virtual std::unordered_map<void *, uint32_t> GetInstanceCount() = 0;
+    virtual std::unordered_map<void *, uint32_t> GetInstanceCount();
 
     virtual ID3D12PipelineState *GetBeginFramePipeline() = 0;
 

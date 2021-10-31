@@ -20,7 +20,7 @@ MaterialManager::Material *MaterialManager::AddDefaultMaterial(unsigned int maxD
 {
     MaterialConstants defaultMaterial = {};
     defaultMaterial.DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    defaultMaterial.FresnelR0 = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
+    defaultMaterial.FresnelR0 = DirectX::XMFLOAT3(0.25f, 0.25f, 0.25f);
     defaultMaterial.MaterialTransform = DirectX::XMMatrixIdentity();
     defaultMaterial.Shininess = 64.f;
     defaultMaterial.textureIndex = -1;

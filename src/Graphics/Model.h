@@ -18,11 +18,20 @@ class Model : public UpdateObject
 public:
     enum class ModelType
     {
-        Triangle = 0, Square
+        Triangle = 0, Square, Grid
     };
     static constexpr const char *ModelTypeString[] =
     {
-        "Triangle", "Square"
+        "Triangle", "Square", "Grid"
+    };
+
+    struct GridInitializationInfo
+    {
+
+        uint32_t N;
+        uint32_t M;
+        float width;
+        float depth;
     };
 
 public:
@@ -32,6 +41,8 @@ public:
 
 public:
     bool Create(ModelType type);
+    template <typename InitializationInfo>
+    bool Create(ModelType type, const InitializationInfo &);
     bool Create(const std::string &path);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path);
@@ -108,6 +119,7 @@ private:
 private:
     bool CreateTriangle();
     bool CreateSquare();
+    bool CreateGrid(const GridInitializationInfo &);
 
 private:
     bool mCanAddInstances = true;
