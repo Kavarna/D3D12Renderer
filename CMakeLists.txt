@@ -16,6 +16,9 @@ FILE(GLOB_RECURSE SHADERS_COMMON "src/Shaders/*.hlsli")
 FILE(GLOB_RECURSE PIXEL_SHADERS "src/Shaders/Pixel*.hlsl")
 FILE(GLOB_RECURSE VERTEX_SHADERS "src/Shaders/Vertex*.hlsl")
 FILE(GLOB_RECURSE COMPUTE_SHADERS "src/Shaders/Compute*.hlsl")
+FILE(GLOB_RECURSE GEOMETRY_SHADERS "src/Shaders/Geometry*.hlsl")
+FILE(GLOB_RECURSE DOMAIN_SHADERS "src/Shaders/Domain*.hlsl")
+FILE(GLOB_RECURSE HULL_SHADERS "src/Shaders/Hull*.hlsl")
 
 add_library(D3D12Renderer
             ${SOURCES}
@@ -26,6 +29,9 @@ add_library(D3D12Renderer
             ${PIXEL_SHADERS}
             ${VERTEX_SHADERS}
             ${COMPUTE_SHADERS}
+            ${GEOMETRY_SHADERS}
+            ${DOMAIN_SHADERS}
+            ${HULL_SHADERS}
             ${SHADERS_COMMON})
 
 
@@ -33,6 +39,9 @@ add_library(D3D12Renderer
 make_filters("${VERTEX_SHADERS}")
 make_filters("${PIXEL_SHADERS}")
 make_filters("${COMPUTE_SHADERS}")
+make_filters("${GEOMETRY_SHADERS}")
+make_filters("${DOMAIN_SHADERS}")
+make_filters("${HULL_SHADERS}")
 make_filters("${SHADERS_COMMON}")
 make_filters("${CORE_SRC}")
 make_filters("${COMMON}")
@@ -67,5 +76,8 @@ endmacro()
 prepare_shaders("${PIXEL_SHADERS}" "Pixel" "6.0")
 prepare_shaders("${VERTEX_SHADERS}" "Vertex" "6.0")
 prepare_shaders("${COMPUTE_SHADERS}" "Compute" "6.0")
+prepare_shaders("${GEOMETRY_SHADERS}" "Geometry" "6.0")
+prepare_shaders("${DOMAIN_SHADERS}" "Domain" "6.0")
+prepare_shaders("${HULL_SHADERS}" "Hull" "6.0")
 
 set(CMAKE_INSTALL_PREFIX ../bin)

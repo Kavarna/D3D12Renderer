@@ -326,6 +326,7 @@ bool PipelineManager::InitMaterialLightPipeline()
     materialLightPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     materialLightPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     materialLightPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+    materialLightPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 
     auto rootSignature = mRootSignatures.find(rootSignatureType);
     CHECK(!(rootSignature == mRootSignatures.end()), false,

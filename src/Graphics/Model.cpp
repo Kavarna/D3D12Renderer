@@ -566,10 +566,11 @@ bool Model::CreateGrid(const GridInitializationInfo &initInfo)
 			indices[k] = i * initInfo.N + j;
 			indices[k + 1] = i * initInfo.N + j + 1;
 			indices[k + 2] = (i + 1) * initInfo.N + j + 1;
+			indices[k + 4] = (i + 1) * initInfo.N + j;
 
-			indices[k + 3] = i * initInfo.N + j;
+			/*indices[k + 3] = i * initInfo.N + j;
 			indices[k + 4] = (i + 1) * initInfo.N + j + 1;
-			indices[k + 5] = (i + 1) * initInfo.N + j;
+			indices[k + 5] = (i + 1) * initInfo.N + j;*/
 
 			k += 6;
 		}
@@ -592,14 +593,19 @@ bool Model::CreateGrid(const GridInitializationInfo &initInfo)
 }
 
 template <typename InitializationInfo>
-bool Model::Create(ModelType type, const InitializationInfo & initInfo)
+bool Model::CreatePrimitive(const InitializationInfo & initInfo)
 {
+
 	if constexpr (std::is_same_v<InitializationInfo, GridInitializationInfo>)
 	{
 		AddInstance();
 		return CreateGrid(initInfo);
 	}
+	else
+	{
+		static_assert(false, "Invalid type for creating a model");
+	}
 	return true;
 }
 
-template bool Model::Create(ModelType type, const Model::GridInitializationInfo &);
+template bool Model::CreatePrimitive(const Model::GridInitializationInfo &);

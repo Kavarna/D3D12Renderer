@@ -42,7 +42,7 @@ public:
 public:
     bool Create(ModelType type);
     template <typename InitializationInfo>
-    bool Create(ModelType type, const InitializationInfo &);
+    bool CreatePrimitive(const InitializationInfo &);
     bool Create(const std::string &path);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path);
