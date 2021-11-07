@@ -139,5 +139,5 @@ private:
 
     RenderParameters mInfo;
     MaterialManager::Material *mMaterial = nullptr;
-    bool mShouldRender = false;
+    bool mShouldRender = true;
 };

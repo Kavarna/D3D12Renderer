@@ -437,7 +437,6 @@ bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resourc
 
 void Model::Bind(ID3D12GraphicsCommandList *cmdList)
 {
-	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList->IASetVertexBuffers(0, 1, &mVertexBufferView);
 	cmdList->IASetIndexBuffer(&mIndexBufferView);
 }
@@ -538,10 +537,10 @@ bool Model::CreateGrid(const GridInitializationInfo &initInfo)
 	float dv = 1.0f / (initInfo.M - 1);
 
 	uint32_t vertexCount = initInfo.M * initInfo.N;
-	uint32_t faceCount = (initInfo.M - 1) * (initInfo.N - 1) * 2;
+	uint32_t faceCount = (initInfo.M - 1) * (initInfo.N - 1);
 
 	std::vector<Vertex> vertices(vertexCount);
-	std::vector<uint32_t> indices(faceCount * 3);
+	std::vector<uint32_t> indices(faceCount * 4);
 
 	for (uint32_t i = 0; i < initInfo.M; ++i)
 	{
@@ -565,14 +564,16 @@ bool Model::CreateGrid(const GridInitializationInfo &initInfo)
 		{
 			indices[k] = i * initInfo.N + j;
 			indices[k + 1] = i * initInfo.N + j + 1;
-			indices[k + 2] = (i + 1) * initInfo.N + j + 1;
-			indices[k + 4] = (i + 1) * initInfo.N + j;
+			indices[k + 2] = (i + 1) * initInfo.N + j;
+			indices[k + 3] = (i + 1) * initInfo.N + j + 1;
+			k += 4;
 
 			/*indices[k + 3] = i * initInfo.N + j;
 			indices[k + 4] = (i + 1) * initInfo.N + j + 1;
-			indices[k + 5] = (i + 1) * initInfo.N + j;*/
-
-			k += 6;
+			indices[k + 5] = (i + 1) * initInfo.N + j;
+			
+			k += 6;*/
+			
 		}
 	}
 

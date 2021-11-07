@@ -117,6 +117,7 @@ bool PipelineManager::InitPipelines()
     CHECK(InitRawTexturePipeline(), false, "Unable to initialize raw texture pipeline");
     CHECK(InitBlurPipelines(), false, "Unable to initialize blur pipelines");
     CHECK(InitInstancedMaterialLightPipeline(), false, "Unable to initialize material light pipeline");
+    CHECK(InitTerrainPipeline(), false, "Unable to initialize terrain pipeline");
 
     SHOWINFO("Successfully initialized all pipelines");
     return true;
@@ -326,7 +327,6 @@ bool PipelineManager::InitMaterialLightPipeline()
     materialLightPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     materialLightPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     materialLightPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
-    materialLightPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 
     auto rootSignature = mRootSignatures.find(rootSignatureType);
     CHECK(!(rootSignature == mRootSignatures.end()), false,
@@ -537,3 +537,64 @@ bool PipelineManager::InitInstancedMaterialLightPipeline()
 }
 
 
+bool PipelineManager::InitTerrainPipeline()
+{
+    auto d3d = Direct3D::Get();
+    PipelineType type = PipelineType::Terrain;
+    RootSignatureType rootSignatureType = RootSignatureType::ObjectFrameMaterialLights;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC terrainPipeline = {};
+
+    terrainPipeline.NodeMask = 0;
+    terrainPipeline.BlendState = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT());
+    terrainPipeline.CachedPSO.CachedBlobSizeInBytes = 0;
+    terrainPipeline.CachedPSO.pCachedBlob = nullptr;
+    terrainPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+    terrainPipeline.DepthStencilState.StencilEnable = FALSE;
+    terrainPipeline.DepthStencilState.DepthEnable = TRUE;
+    terrainPipeline.DSVFormat = Direct3D::kDepthStencilFormat;
+    terrainPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+    terrainPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+    terrainPipeline.NumRenderTargets = 1;
+    terrainPipeline.RTVFormats[0] = Direct3D::kBackbufferFormat;
+    terrainPipeline.SampleDesc.Count = 1;
+    terrainPipeline.SampleDesc.Quality = 0;
+    terrainPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    terrainPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+    terrainPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+    terrainPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+
+    auto rootSignature = mRootSignatures.find(rootSignatureType);
+    CHECK(!(rootSignature == mRootSignatures.end()), false,
+          "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
+    terrainPipeline.pRootSignature = rootSignature->second.Get();
+
+    auto elementDesc = PositionNormalTexCoordVertex::GetInputElementDesc();
+    terrainPipeline.InputLayout.NumElements = (uint32_t)elementDesc.size();
+    terrainPipeline.InputLayout.pInputElementDescs = elementDesc.data();
+
+    ComPtr<ID3DBlob> vertexShader, hullShader, domainShader, pixelShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\TerrainPipeline_VertexShader.cso", &vertexShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\TerrainPipeline_HullShader.cso", &hullShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\TerrainPipeline_DomainShader.cso", &domainShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\TerrainPipeline_PixelShader.cso", &pixelShader), false);
+
+    terrainPipeline.VS.BytecodeLength = vertexShader->GetBufferSize();
+    terrainPipeline.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+    terrainPipeline.HS.BytecodeLength = hullShader->GetBufferSize();
+    terrainPipeline.HS.pShaderBytecode = hullShader->GetBufferPointer();
+    terrainPipeline.DS.BytecodeLength = domainShader->GetBufferSize();
+    terrainPipeline.DS.pShaderBytecode = domainShader->GetBufferPointer();
+    terrainPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
+    terrainPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+
+    auto pipeline = d3d->CreatePipelineState(terrainPipeline);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(vertexShader);
+    mShaders[type].push_back(pixelShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
+    SHOWINFO("Successfully initialized material light pipeline");
+    return true;
+}

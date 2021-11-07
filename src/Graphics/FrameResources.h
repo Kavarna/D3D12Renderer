@@ -15,6 +15,8 @@ struct PerPassInfo
 {
     DirectX::XMMATRIX View;
     DirectX::XMMATRIX Projection;
+
+    DirectX::XMFLOAT3 CameraPosition;
 };
 
 #define MAX_LIGHTS 10

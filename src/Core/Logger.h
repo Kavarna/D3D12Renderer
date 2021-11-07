@@ -33,6 +33,10 @@ void Init();
 template <typename... Args>
 constexpr void Log(LogLevel level, const char *fileName, unsigned int lineNumber, const char *functionName, const char *format, const Args&... args)
 {
+    if (format[0] == '\0' || format == nullptr)
+    {
+        return;
+    }
 #ifdef COLOR_LOGS
     fmt::v8::text_style style;
     if (level == LogLevel::FATAL)

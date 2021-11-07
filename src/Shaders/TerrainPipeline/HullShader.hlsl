@@ -10,8 +10,8 @@ PatchTess ConstantHS(InputPatch<VSOut, 4> patch, uint patchID : SV_PrimitiveID)
     
     float d = distance(centerW, CameraPosition);
     
-    const float d0 = 0.0f;
-    const float d1 = 100.0f;
+    const float d0 = 10.0f;
+    const float d1 = 200.0f;
     float tess = 64.f * saturate((d1 - d) / (d1 - d0));
     
     pt.EdgeTess[0] = tess;
@@ -26,7 +26,7 @@ PatchTess ConstantHS(InputPatch<VSOut, 4> patch, uint patchID : SV_PrimitiveID)
 }
 
 [domain("quad")]
-[partitioning("integer")]
+[partitioning("fractional_even")]
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(4)]
 [patchconstantfunc("ConstantHS")]
