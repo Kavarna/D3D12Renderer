@@ -76,7 +76,7 @@ public:
     uint32_t GetBaseVertexLocation() const;
     uint32_t GetStartIndexLocation() const;
 
-    void SetMaterial(MaterialManager::Material *);
+    void SetMaterial(const MaterialManager::Material *);
     MaterialManager::Material const *GetMaterial() const;
 
     const DirectX::XMMATRIX &__vectorcall GetWorld(unsigned int instanceID = 0) const;
@@ -138,6 +138,6 @@ private:
     std::vector<ModelInstanceInfo> mInstancesInfo;
 
     RenderParameters mInfo;
-    MaterialManager::Material *mMaterial = nullptr;
+    MaterialManager::Material const *mMaterial = nullptr;
     bool mShouldRender = true;
 };

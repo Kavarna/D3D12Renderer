@@ -561,7 +561,7 @@ bool PipelineManager::InitTerrainPipeline()
     terrainPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     terrainPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
     terrainPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
-    terrainPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+    // terrainPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 
     auto rootSignature = mRootSignatures.find(rootSignatureType);
     CHECK(!(rootSignature == mRootSignatures.end()), false,

@@ -132,5 +132,19 @@ float4 ComputeLighting(Light lights[MAX_LIGHTS], int numDirectionalLights, int n
     return float4(result, 0.0f);
 }
 
+#define BILINEAR_INTERPOLATION_IMPLEMENTATION(type) \
+type BilinearInterpolation(type params[4], float2 interpolationParams) \
+{ \
+    type v1 = lerp(params[0], params[1], interpolationParams.x); \
+    type v2 = lerp(params[2], params[3], interpolationParams.x); \
+    return lerp(v1, v2, interpolationParams.y); \
+}
+
+
+BILINEAR_INTERPOLATION_IMPLEMENTATION(float1)
+BILINEAR_INTERPOLATION_IMPLEMENTATION(float2)
+BILINEAR_INTERPOLATION_IMPLEMENTATION(float3)
+BILINEAR_INTERPOLATION_IMPLEMENTATION(float4)
+
 #endif // _UTILS_HLSLI_
 

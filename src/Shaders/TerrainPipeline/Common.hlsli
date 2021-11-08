@@ -49,24 +49,39 @@ struct PatchTess
 
 struct VSIn
 {
-    float4 Position : POSITION;
+    float3 Position : POSITION;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD;
 };
 
 struct VSOut
 {
     float4 Position : SV_Position;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD;
 };
 
 struct HullOut
 {
     float4 Position : POSITION;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD;
 };
 
 struct DomainOut
 {
     float4 Position : SV_Position;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD;
 };
 
+
+Texture2D diffuseMap : register(s0);
+
+SamplerState wrapLinearSampler : register(s0);
+SamplerState wrapPointSampler : register(s1);
+SamplerState clampLinearSampler : register(s2);
+SamplerState clampPointSampler : register(s3);
 
 
 #endif // _COMMON_HLSLI_

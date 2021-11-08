@@ -36,7 +36,7 @@ uint32_t Model::GetStartIndexLocation() const
 	return mInfo.StartIndexLocation;
 }
 
-void Model::SetMaterial(MaterialManager::Material * newMaterial)
+void Model::SetMaterial(MaterialManager::Material const *newMaterial)
 {
 	mMaterial = newMaterial;
 }
@@ -552,8 +552,8 @@ bool Model::CreateGrid(const GridInitializationInfo &initInfo)
 			vertices[i * initInfo.N + j].Position = DirectX::XMFLOAT3(x, 0.0f, z);
 			vertices[i * initInfo.N + j].Normal = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f);
 
-			vertices[i * initInfo.N + j].TexCoord.x = du;
-			vertices[i * initInfo.N + j].TexCoord.y = dv;
+			vertices[i * initInfo.N + j].TexCoord.x = i * du;
+			vertices[i * initInfo.N + j].TexCoord.y = j * dv;
 		}
 	}
 

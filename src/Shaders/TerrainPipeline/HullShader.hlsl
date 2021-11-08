@@ -38,6 +38,8 @@ HullOut main(InputPatch<VSOut, 4> p,
     HullOut hout;
 	
     hout.Position = p[i].Position;
+    hout.Normal = p[i].Normal;
+    hout.TexCoords = p[i].TexCoords;
 	
     return hout;
 }
