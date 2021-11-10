@@ -51,7 +51,7 @@ make_filters("${INPUT_SRC}")
 
 target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib")
 
-set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 17)
+set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 20)
 
 macro(prepare_shaders _source_list _shader_type _shader_model)
     foreach(_source IN ITEMS ${_source_list})
