@@ -373,7 +373,7 @@ LRESULT Engine::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-std::unordered_map<void *, uint32_t> Engine::GetInstanceCount()
+std::unordered_map<uuids::uuid, uint32_t> Engine::GetInstanceCount()
 {
-    return std::unordered_map<void *, uint32_t>();
+    return std::unordered_map<uuids::uuid, uint32_t>();
 }

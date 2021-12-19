@@ -64,6 +64,7 @@ using Microsoft::WRL::ComPtr;
 // Libs stuff
 #include <effolkronium/random.hpp>
 using Random = effolkronium::random_static;
+#include "uuid.h"
 
 
 constexpr auto VERSION = "0.0.0.0";

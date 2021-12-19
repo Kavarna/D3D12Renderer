@@ -225,7 +225,7 @@ Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMes
 	if (currentMaterial->Get(AI_MATKEY_COLOR_SPECULAR, fresnel) != aiReturn::aiReturn_SUCCESS)
 	{
 		fresnel = { 0.25f, 0.25f, 0.25f };
-		SHOWWARNING("Unable get specular color for material {}. Using default { 0.25, 0.25, 0.25 }", materialName);
+		SHOWWARNING("Unable get specular color for material {}. Using default ( 0.25, 0.25, 0.25 )", materialName);
 	}
 	aiString texturePath;
 	materialInfo.textureIndex = -1;
@@ -283,10 +283,10 @@ bool Model::Create(const std::string &path)
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
 											  aiProcess_ConvertToLeftHanded);
-
+	CHECK(pScene != nullptr, false, "Unable to load model located at path {}", path);
 
 	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,
-		  "Unable to load model located at path {}", path);
+		  "Unable to process model located at path {}", path);
 	AddInstance();
 
 	return true;
