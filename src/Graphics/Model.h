@@ -12,7 +12,7 @@
 #include <assimp\postprocess.h>
 #include <assimp\mesh.h>
 
-class Model : public UpdateObject
+class Model : public UpdateObject, public D3DObject
 {
     using Vertex = PositionNormalTexCoordVertex;
 public:
@@ -136,6 +136,9 @@ private:
     };
 
     std::vector<ModelInstanceInfo> mInstancesInfo;
+
+    DirectX::BoundingBox mBoundingBox;
+    DirectX::BoundingSphere mBoundingSphere;
 
     RenderParameters mInfo;
     MaterialManager::Material const *mMaterial = nullptr;

@@ -50,6 +50,7 @@ using Microsoft::WRL::ComPtr;
 #include <iostream>
 #include <filesystem>
 #include <random>
+#include <stack>
 
 
 // My stuff

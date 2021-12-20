@@ -13,10 +13,12 @@ public:
     bool Init()
     {
         mDevice = Direct3D::Get()->GetD3D12Device();
+        mObjectUUID = uuids::uuid_system_generator{}();
         return true;
     }
 
 protected:
     ComPtr<ID3D12Device> mDevice;
+    uuids::uuid mObjectUUID;
 };
 

@@ -170,6 +170,9 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 		vertices.push_back(std::move(currentVertex));
 	}
 
+	mBoundingBox.CreateFromPoints(mBoundingBox, mVertices.size(), (DirectX::XMFLOAT3*)vertices.data(), sizeof(vertices[0]));
+	mBoundingSphere.CreateFromPoints(mBoundingSphere, mVertices.size(), (DirectX::XMFLOAT3*)vertices.data(), sizeof(vertices[0]));
+
 	std::vector<uint32_t> indices;
 	indices.reserve(mesh->mNumFaces * 3);
 	for (uint32_t i = 0; i < mesh->mNumFaces; ++i)
