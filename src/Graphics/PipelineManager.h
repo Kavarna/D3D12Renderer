@@ -8,21 +8,24 @@
 enum class PipelineType
 {
     SimpleColor = 0, MaterialLight, RawTexture, HorizontalBlur, VerticalBlur,
-    InstancedMaterialLight, Terrain,
+    InstancedMaterialLight, Terrain, InstancedColorMaterialLight, DebugPipeline
 };
 static constexpr const char *PipelineTypeString[] =
 {
     "SimpleColor", "MaterialLight", "RawTexture", "HorizontalBlur", "VerticalBlur",
-    "InstancedMaterialLight", "Terrain",
+    "InstancedMaterialLight", "Terrain", "InstancedColorMaterialLight", "DebugPipeline"
 };
 
 enum class RootSignatureType
 {
-    Empty = 0, SimpleColor, ObjectFrameMaterialLights, TextureOnly, TextureSrvUavBuffer
+    Empty = 0, SimpleColor, ObjectFrameMaterialLights, TextureOnly, TextureSrvUavBuffer,
+    PassMaterialLightsTextureInstance, OneCBV
+
 };
 static constexpr const char *RootSignatureTypeString[] =
 {
-    "Empty", "SimpleColor", "ObjectFrameMaterialLights", "TextureOnly", "TextureSrvUavBuffer"
+    "Empty", "SimpleColor", "ObjectFrameMaterialLights", "TextureOnly", "TextureSrvUavBuffer",
+    "PassMaterialLightsTextureInstance", "OneCBV"
 };
 
 class PipelineManager : public ISingletone<PipelineManager>
@@ -50,6 +53,8 @@ private:
     bool InitObjectFrameMaterialRootSignature();
     bool InitTextureOnlyRootSignature();
     bool InitTextureSrvUavBufferRootSignature();
+    bool InitPassMaterialLightsTextureInstance();
+    bool InitOneCBV();
 
 private:
     bool InitSimpleColorPipeline();
@@ -58,6 +63,8 @@ private:
     bool InitBlurPipelines();
     bool InitInstancedMaterialLightPipeline();
     bool InitTerrainPipeline();
+    bool InitInstancedMaterialColorLightPipeline();
+    bool InitDebugPipeline();
 
 private:
     bool mCreated = false;

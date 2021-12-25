@@ -17,6 +17,12 @@ public:
         return true;
     }
 
+public:
+    const uuids::uuid& GetUUID() const
+    {
+        return mObjectUUID;
+    }
+
 protected:
     ComPtr<ID3D12Device> mDevice;
     uuids::uuid mObjectUUID;
