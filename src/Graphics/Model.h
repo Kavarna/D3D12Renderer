@@ -62,6 +62,9 @@ public:
 
     void CloseAddingInstances();
 
+    const DirectX::BoundingBox& GetBoundingBox() const;
+    const DirectX::BoundingSphere& GetBoundingSphere() const;
+
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList* cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
     static void Bind(ID3D12GraphicsCommandList* cmdList);

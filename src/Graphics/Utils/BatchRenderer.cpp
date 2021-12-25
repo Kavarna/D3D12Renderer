@@ -14,7 +14,7 @@ void BatchRenderer::Begin()
     mCurrentIndex = 0;
 }
 
-bool BatchRenderer::Vertex(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT4 color)
+bool BatchRenderer::Vertex(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT4& color)
 {
     CHECK(mCurrentIndex < mMaxVertices, false,
         "Cannot add vertex (Position = {}, Color = {}) to batch renderer, cause it's already full (size = {}, capacity = {}).",
@@ -29,6 +29,101 @@ bool BatchRenderer::Vertex(const DirectX::XMFLOAT3& position, const DirectX::XMF
         CHECK(ReconstructAndCopy(mMaxVertices * 10), true,
             "Cannot reconstruct & copy after adding vertex (Position = {}, Color = {}). Future Vertex() calls will fail.", position, color);
     }
+    return true;
+}
+
+bool BatchRenderer::BoundingBox(const DirectX::BoundingBox& bb, const DirectX::XMFLOAT4& color)
+{
+    const auto& center = bb.Center;
+    const auto& extents = bb.Extents;
+
+    DirectX::XMFLOAT3 backBottomLeft = {
+        center.x - extents.x,
+        center.y - extents.y,
+        center.z - extents.z,
+    };
+
+    DirectX::XMFLOAT3 frontBottomLeft = {
+        center.x - extents.x,
+        center.y - extents.y,
+        center.z + extents.z,
+    };
+
+    DirectX::XMFLOAT3 backTopLeft = {
+        center.x - extents.x,
+        center.y + extents.y,
+        center.z - extents.z,
+    };
+
+    DirectX::XMFLOAT3 frontTopLeft = {
+        center.x - extents.x,
+        center.y + extents.y,
+        center.z + extents.z,
+    };
+
+    DirectX::XMFLOAT3 backBottomRight = {
+        center.x + extents.x,
+        center.y - extents.y,
+        center.z - extents.z,
+    };
+
+    DirectX::XMFLOAT3 frontBottomRight = {
+        center.x + extents.x,
+        center.y - extents.y,
+        center.z + extents.z,
+    };
+
+    DirectX::XMFLOAT3 backTopRight = {
+        center.x + extents.x,
+        center.y + extents.y,
+        center.z - extents.z,
+    };
+
+    DirectX::XMFLOAT3 frontTopRight = {
+        center.x + extents.x,
+        center.y + extents.y,
+        center.z + extents.z,
+    };
+
+    // Lower base
+    Vertex(backBottomLeft, color);
+    Vertex(frontBottomLeft, color);
+
+    Vertex(frontBottomLeft, color);
+    Vertex(frontBottomRight, color);
+
+    Vertex(frontBottomRight, color);
+    Vertex(backBottomRight, color);
+
+    Vertex(backBottomRight, color);
+    Vertex(backBottomLeft, color);
+
+    // Upper base
+    Vertex(backTopLeft, color);
+    Vertex(frontTopLeft, color);
+
+    Vertex(frontTopLeft, color);
+    Vertex(frontTopRight, color);
+
+    Vertex(frontTopRight, color);
+    Vertex(backTopRight, color);
+
+    Vertex(backTopRight, color);
+    Vertex(backTopLeft, color);
+
+    // Connect the bases
+    Vertex(backBottomLeft, color);
+    Vertex(backTopLeft, color);
+
+    Vertex(frontBottomLeft, color);
+    Vertex(frontTopLeft, color);
+
+    Vertex(backBottomRight, color);
+    Vertex(backTopRight, color);
+
+    Vertex(frontBottomRight, color);
+    Vertex(frontTopRight, color);
+
     return true;
 }
 

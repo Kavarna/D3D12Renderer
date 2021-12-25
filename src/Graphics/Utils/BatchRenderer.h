@@ -17,7 +17,8 @@ public:
     bool Create(uint32_t maxVertices = 10000);
 
     void Begin();
-    bool Vertex(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT4 color);
+    bool Vertex(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT4& color);
+    bool BoundingBox(const DirectX::BoundingBox& bb, const DirectX::XMFLOAT4& color);
     /// <summary>
     /// It's recommended this is called at the end of a frame, because it resets the current vertex buffer
     /// </summary>

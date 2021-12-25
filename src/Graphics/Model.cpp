@@ -417,6 +417,16 @@ void Model::CloseAddingInstances()
 	mCanAddInstances = false;
 }
 
+const DirectX::BoundingBox& Model::GetBoundingBox() const
+{
+	return mBoundingBox;
+}
+
+const DirectX::BoundingSphere& Model::GetBoundingSphere() const
+{
+	return mBoundingSphere;
+}
+
 bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2])
 {
 	CHECK(mVertices.size() > 0 && mIndices.size() > 0, false, "Unable to initialize model's buffers, because there are no vertices / indices");
