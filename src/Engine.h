@@ -5,6 +5,7 @@
 #include "Model.h"
 #include "FrameResources.h"
 #include "Camera.h"
+#include "ThirdPersonCamera.h"
 #include "SceneLight.h"
 #include "BlurFilter.h"
 #include "OrthographicCamera.h"

@@ -1,0 +1,99 @@
+#include "ThirdPersonCamera.h"
+
+
+using namespace DirectX;
+
+void ThirdPersonCamera::Init(unsigned int maxDirtyFrames, unsigned int constantBufferIndex)
+{
+    return UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+}
+
+void ThirdPersonCamera::Create(float aspectRatio, float FOV, float nearZ, float farZ, float yaw, float pitch)
+{
+
+    MarkUpdate();
+
+    mPosition = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+    mForwadDirection = mForwardVector;
+    mRightDirection = mRightVector;
+    mUpDirection = DirectX::XMVector3Cross(mForwadDirection, mRightDirection);
+
+    mAspectRatio = aspectRatio;
+    mNearZ = nearZ;
+    mFarZ = farZ;
+    mFOV = FOV;
+
+    mYaw = yaw;
+    mPitch = pitch;
+
+    mProjectionMatrix = DirectX::XMMatrixPerspectiveFovLH(mFOV, mAspectRatio, mNearZ, mFarZ);
+    Update(0.0f, 0.0f, 0.0f);
+}
+
+void ThirdPersonCamera::Update(float dt, float mouseHorizontalMove, float mouseVerticalMove)
+{
+    if (mouseHorizontalMove != 0.0f || mouseVerticalMove != 0.0f)
+    {
+        mYaw += dt * mouseHorizontalMove;
+        mPitch += dt * mouseVerticalMove;
+        MarkUpdate();
+    }
+
+    // Avoid gimbal lock
+    XMVECTOR rotationQuaternion = XMQuaternionRotationRollPitchYaw(mPitch, mYaw, 0.0f);
+
+    mForwadDirection = XMVector3Rotate(mForwardVector, rotationQuaternion);
+    mRightDirection = XMVector3Rotate(mRightVector, rotationQuaternion);
+    mUpDirection = XMVector3Cross(mForwadDirection, mRightDirection);
+
+    XMVECTOR cameraTarget = XMLoadFloat3(&mCameraTarget);
+    XMVECTOR cameraPosition = cameraTarget - mForwadDirection * mDistance;
+
+    mViewMatrix = DirectX::XMMatrixLookToLH(cameraPosition, mForwadDirection, mUpDirection);
+}
+
+
+void ThirdPersonCamera::AdjustZoom(float zoomLevel)
+{
+    mDistance -= zoomLevel;
+    mDistance = std::max(3.f, mDistance);
+    mDistance = std::min(mDistance, 15.f);
+}
+
+const DirectX::XMMATRIX& __vectorcall ThirdPersonCamera::GetView() const
+{
+    return mViewMatrix;
+}
+
+const DirectX::XMMATRIX& __vectorcall ThirdPersonCamera::GetProjection() const
+{
+    return mProjectionMatrix;
+}
+
+DirectX::XMFLOAT3 ThirdPersonCamera::GetPosition() const
+{
+    DirectX::XMFLOAT3 position;
+    DirectX::XMStoreFloat3(&position, mPosition);
+    return position;
+}
+
+DirectX::XMFLOAT3 ThirdPersonCamera::GetDirection() const
+{
+    DirectX::XMFLOAT3 direction;
+    DirectX::XMStoreFloat3(&direction, mForwadDirection);
+    return direction;
+}
+
+DirectX::XMFLOAT3 ThirdPersonCamera::GetUpDirection() const
+{
+    DirectX::XMFLOAT3 upDirection;
+    DirectX::XMStoreFloat3(&upDirection, mUpDirection);
+    return upDirection;
+}
+
+DirectX::XMFLOAT3 ThirdPersonCamera::GetRightDirection() const
+{
+    DirectX::XMFLOAT3 rightDirection;
+    DirectX::XMStoreFloat3(&rightDirection, mRightDirection);
+    return rightDirection;
+}
