@@ -7,7 +7,7 @@
 #include "Interfaces/ICamera.h"
 
 OBLIVION_ALIGN(16)
-class Camera : public UpdateObject, public ICamera
+class Camera : public ICamera
 {
 public:
     Camera() = default;
@@ -24,10 +24,11 @@ public:
     const DirectX::XMMATRIX& __vectorcall GetView() const override;
     const DirectX::XMMATRIX& __vectorcall GetProjection() const override;
     const DirectX::XMVECTOR& __vectorcall GetDirection() const override;
-    const DirectX::XMVECTOR& __vectorcall GetRightDirection() const;
+    const DirectX::XMVECTOR& __vectorcall GetRightDirection() const override;
+    const DirectX::XMVECTOR& __vectorcall GetPosition() const override;
 
-    DirectX::XMFLOAT3 GetPosition() const;
     DirectX::XMFLOAT3 GetUpDirection() const;
+    void __vectorcall SetPosition(const DirectX::XMVECTOR&);
 
 public:
     void MoveForward(float dt);

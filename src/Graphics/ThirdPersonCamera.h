@@ -7,7 +7,7 @@
 
 
 OBLIVION_ALIGN(16)
-class ThirdPersonCamera : public UpdateObject, public ICamera
+class ThirdPersonCamera : public ICamera
 {
 public:
     ThirdPersonCamera() = default;
@@ -27,8 +27,8 @@ public:
     const DirectX::XMMATRIX& __vectorcall GetProjection() const override;
     const DirectX::XMVECTOR& __vectorcall GetDirection() const override;
     const DirectX::XMVECTOR& __vectorcall GetRightDirection() const override;
+    const DirectX::XMVECTOR& __vectorcall GetPosition() const override;
 
-    DirectX::XMFLOAT3 GetPosition() const;
     DirectX::XMFLOAT3 GetUpDirection() const;
 
     void SetTarget(const DirectX::XMVECTOR&);

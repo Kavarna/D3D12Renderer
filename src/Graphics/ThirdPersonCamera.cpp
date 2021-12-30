@@ -70,11 +70,9 @@ const DirectX::XMMATRIX& __vectorcall ThirdPersonCamera::GetProjection() const
     return mProjectionMatrix;
 }
 
-DirectX::XMFLOAT3 ThirdPersonCamera::GetPosition() const
+const DirectX::XMVECTOR& __vectorcall ThirdPersonCamera::GetPosition() const
 {
-    DirectX::XMFLOAT3 position;
-    DirectX::XMStoreFloat3(&position, mPosition);
-    return position;
+    return mPosition;
 }
 
 const DirectX::XMVECTOR& __vectorcall ThirdPersonCamera::GetDirection() const

@@ -6,7 +6,7 @@
 
 
 OBLIVION_ALIGN(16)
-class OrthographicCamera : public UpdateObject, public ICamera
+class OrthographicCamera : public ICamera
 {
 public:
     OrthographicCamera() = default;
