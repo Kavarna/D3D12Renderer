@@ -46,7 +46,7 @@ void ThirdPersonCamera::Update(float dt, float mouseHorizontalMove, float mouseV
     mRightDirection = XMVector3Rotate(mRightVector, rotationQuaternion);
     mUpDirection = XMVector3Cross(mForwadDirection, mRightDirection);
 
-    XMVECTOR cameraTarget = XMLoadFloat3(&mCameraTarget);
+    XMVECTOR cameraTarget = mCameraTarget;
     XMVECTOR cameraPosition = cameraTarget - mForwadDirection * mDistance;
 
     mViewMatrix = DirectX::XMMatrixLookToLH(cameraPosition, mForwadDirection, mUpDirection);
@@ -77,11 +77,9 @@ DirectX::XMFLOAT3 ThirdPersonCamera::GetPosition() const
     return position;
 }
 
-DirectX::XMFLOAT3 ThirdPersonCamera::GetDirection() const
+const DirectX::XMVECTOR& __vectorcall ThirdPersonCamera::GetDirection() const
 {
-    DirectX::XMFLOAT3 direction;
-    DirectX::XMStoreFloat3(&direction, mForwadDirection);
-    return direction;
+    return mForwadDirection;
 }
 
 DirectX::XMFLOAT3 ThirdPersonCamera::GetUpDirection() const
@@ -91,9 +89,12 @@ DirectX::XMFLOAT3 ThirdPersonCamera::GetUpDirection() const
     return upDirection;
 }
 
-DirectX::XMFLOAT3 ThirdPersonCamera::GetRightDirection() const
+const DirectX::XMVECTOR& __vectorcall ThirdPersonCamera::GetRightDirection() const
 {
-    DirectX::XMFLOAT3 rightDirection;
-    DirectX::XMStoreFloat3(&rightDirection, mRightDirection);
-    return rightDirection;
+    return mRightDirection;
+}
+
+void ThirdPersonCamera::SetTarget(const DirectX::XMVECTOR& target)
+{
+    mCameraTarget = target;
 }
