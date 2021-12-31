@@ -5,6 +5,7 @@
 #include <ISingletone.h>
 #include <Utils/UploadBuffer.h>
 #include "../Vertex.h"
+#include "PipelineManager.h"
 
 
 class BatchRenderer
@@ -19,6 +20,9 @@ public:
     void Begin();
     bool Vertex(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT4& color);
     bool BoundingBox(const DirectX::BoundingBox& bb, const DirectX::XMFLOAT4& color);
+    bool Rectangle(const DirectX::XMFLOAT2& leftBottom, const DirectX::XMFLOAT2& rightTop, const DirectX::XMFLOAT4& color);
+    template <PipelineType pipeline, D3D12_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_LINELIST>
+    bool SetPipeline(ID3D12GraphicsCommandList* cmdList);
     /// <summary>
     /// It's recommended this is called at the end of a frame, because it resets the current vertex buffer
     /// </summary>
@@ -38,3 +42,23 @@ public:
 
 };
 
+template<PipelineType pipeline, D3D12_PRIMITIVE_TOPOLOGY topology>
+inline bool BatchRenderer::SetPipeline(ID3D12GraphicsCommandList* cmdList)
+{
+    static ID3D12PipelineState* pipelineState = nullptr;
+    static ID3D12RootSignature* rootSignature = nullptr;
+
+    if (pipelineState == nullptr || rootSignature == nullptr)
+    {
+        auto pipelineSignatureResult = PipelineManager::Get()->GetPipelineAndRootSignature(pipeline);
+        CHECK(pipelineSignatureResult.Valid(), false, "Unable to get pipeline for debug rendering");
+
+        std::tie(pipelineState, rootSignature) = pipelineSignatureResult.Get();
+    }
+
+    cmdList->SetPipelineState(pipelineState);
+    cmdList->SetGraphicsRootSignature(rootSignature);
+
+    cmdList->IASetPrimitiveTopology(topology);
+    return true;
+}

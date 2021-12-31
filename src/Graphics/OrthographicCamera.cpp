@@ -72,3 +72,18 @@ const DirectX::XMMATRIX &__vectorcall OrthographicCamera::GetProjection() const
 {
     return mProjectionMatrix;
 }
+
+const DirectX::XMVECTOR& __vectorcall OrthographicCamera::GetDirection() const
+{
+    return mForwadDirection;
+}
+
+const DirectX::XMVECTOR& __vectorcall OrthographicCamera::GetRightDirection() const
+{
+    return mRightDirection;
+}
+
+const DirectX::XMVECTOR& __vectorcall OrthographicCamera::GetPosition() const
+{
+    return mPosition;
+}

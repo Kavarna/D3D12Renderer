@@ -35,6 +35,7 @@ protected:
     virtual ID3D12PipelineState *GetBeginFramePipeline() = 0;
 
     virtual uint32_t GetModelCount() = 0;
+    virtual uint32_t GetPassCount() = 0;
 
 protected:
     std::unique_ptr<DirectX::Mouse> mMouse;

@@ -38,12 +38,12 @@ uint32_t Model::GetStartIndexLocation() const
 
 void Model::SetMaterial(MaterialManager::Material const *newMaterial)
 {
-	mMaterial = newMaterial;
+	mInfo.Material = newMaterial;
 }
 
 MaterialManager::Material const *Model::GetMaterial() const
 {
-	return mMaterial;
+	return mInfo.Material;
 }
 
 const InstanceInfo& __vectorcall Model::GetInstanceInfo(unsigned int instanceID) const
@@ -154,9 +154,9 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	auto materialInfoResult = ProcessMaterialFromMesh(mesh, scene);
 	CHECK(materialInfoResult.Valid(), false, "[Loading Model {}] Cannot get material from mesh {}", path, meshName);
 	auto [materialName, materialInfo] = materialInfoResult.Get();
-	mMaterial = MaterialManager::Get()->AddMaterial(
+	auto* material = MaterialManager::Get()->AddMaterial(
 		GetMaxDirtyFrames(), materialName, materialInfo);
-	CHECK(mMaterial != nullptr, false, "[Loading Model {}] Cannot add material {} to material manager ", path, materialName);
+	CHECK(material != nullptr, false, "[Loading Model {}] Cannot add material {} to material manager ", path, materialName);
 
 	std::vector<Vertex> vertices;
 	vertices.reserve(mesh->mNumVertices);
@@ -190,6 +190,7 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	mModelsRenderParameters[meshName].StartIndexLocation = (uint32_t)mIndices.size();
 	mModelsRenderParameters[meshName].VertexCount = (uint32_t)vertices.size();
 	mModelsRenderParameters[meshName].IndexCount = (uint32_t)indices.size();
+	mModelsRenderParameters[meshName].Material = material;
 
 	mVertices.reserve(mVertices.size() + (uint32_t)vertices.size());
 	std::move(std::begin(vertices), std::end(vertices), std::back_inserter(mVertices));
@@ -304,6 +305,7 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path)
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+	D3DObject::Init();
 	return Create(path);
 }
 

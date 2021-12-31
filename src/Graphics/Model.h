@@ -115,6 +115,7 @@ private:
         uint32_t VertexCount;
         uint32_t BaseVertexLocation;
         uint32_t StartIndexLocation;
+        MaterialManager::Material const* Material = nullptr;
     };
 
     static std::unordered_map<std::string, RenderParameters> mModelsRenderParameters;
@@ -146,5 +147,4 @@ private:
     DirectX::BoundingSphere mBoundingSphere;
 
     RenderParameters mInfo;
-    MaterialManager::Material const* mMaterial = nullptr;
 };

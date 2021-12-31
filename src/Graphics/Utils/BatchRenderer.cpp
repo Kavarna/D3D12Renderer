@@ -127,6 +127,24 @@ bool BatchRenderer::BoundingBox(const DirectX::BoundingBox& bb, const DirectX::X
     return true;
 }
 
+bool BatchRenderer::Rectangle(const DirectX::XMFLOAT2& leftBottom_, const DirectX::XMFLOAT2& rightTop_, const DirectX::XMFLOAT4& color)
+{
+    DirectX::XMFLOAT3 leftBottom = { leftBottom_.x, leftBottom_.y, 1.0f };
+    DirectX::XMFLOAT3 rightBottom = { rightTop_.x, leftBottom_.y, 1.0f };
+    DirectX::XMFLOAT3 leftTop = { leftBottom_.x, rightTop_.y, 1.0f };
+    DirectX::XMFLOAT3 rightTop = { rightTop_.x, rightTop_.y, 1.0f };
+    
+    Vertex(leftBottom, color);
+    Vertex(leftTop, color);
+    Vertex(rightBottom, color);
+    
+    Vertex(leftTop, color);
+    Vertex(rightBottom, color);
+    Vertex(rightTop, color);
+
+    return true;
+}
+
 bool BatchRenderer::End(ID3D12GraphicsCommandList* cmdList)
 {
     if (mCurrentIndex == 0)
@@ -134,13 +152,6 @@ bool BatchRenderer::End(ID3D12GraphicsCommandList* cmdList)
         // No rendering needed
         return true;
     }
-    auto pipelineSignatureResult = PipelineManager::Get()->GetPipelineAndRootSignature(PipelineType::DebugPipeline);
-    CHECK(pipelineSignatureResult.Valid(), false, "Unable to get pipeline for debug rendering");
-
-    auto [pipeline, rootSignature] = pipelineSignatureResult.Get();
-    
-    cmdList->SetPipelineState(pipeline);
-    cmdList->SetGraphicsRootSignature(rootSignature);
 
     D3D12_VERTEX_BUFFER_VIEW vbView = {};
     vbView.BufferLocation = mVertexBuffer.GetGPUVirtualAddress();
@@ -148,10 +159,9 @@ bool BatchRenderer::End(ID3D12GraphicsCommandList* cmdList)
     vbView.StrideInBytes = sizeof(PositionColorVertex);
     cmdList->IASetVertexBuffers(0, 1, &vbView);
 
-    cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 
     cmdList->DrawInstanced(mCurrentIndex, 1, 0, 0);
-    
+
     return true;
 }
 
