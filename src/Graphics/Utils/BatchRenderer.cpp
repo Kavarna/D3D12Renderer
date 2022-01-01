@@ -139,8 +139,8 @@ bool BatchRenderer::Rectangle(const DirectX::XMFLOAT2& leftBottom_, const Direct
     Vertex(rightBottom, color);
     
     Vertex(leftTop, color);
-    Vertex(rightBottom, color);
     Vertex(rightTop, color);
+    Vertex(rightBottom, color);
 
     return true;
 }

@@ -320,7 +320,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.CachedPSO.pCachedBlob = nullptr;
     simpleColorPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
     simpleColorPipeline.DepthStencilState.StencilEnable = FALSE;
-    simpleColorPipeline.DepthStencilState.DepthEnable = TRUE;
+    simpleColorPipeline.DepthStencilState.DepthEnable = FALSE;
     simpleColorPipeline.DSVFormat = Direct3D::kDepthStencilFormat;
     simpleColorPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
     simpleColorPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;

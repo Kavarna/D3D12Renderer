@@ -38,6 +38,9 @@ struct InstanceInfo
 {
     row_major float4x4 World;
     float4 Color;
+
+    float AnimationTime;
+    float3 pad;
 };
 
 struct VSIn
