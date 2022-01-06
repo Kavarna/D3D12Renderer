@@ -63,7 +63,7 @@ struct PositionNormalTexCoordVertex
         Position(x, y, z), Normal(nx, ny, nz), TexCoord(u, v)
     {
     };
-    PositionNormalTexCoordVertex(const DirectX::XMFLOAT3 &position, DirectX::XMFLOAT3 &normal, const DirectX::XMFLOAT2 &texCoord):
+    PositionNormalTexCoordVertex(const DirectX::XMFLOAT3 &position, const DirectX::XMFLOAT3 &normal, const DirectX::XMFLOAT2 &texCoord):
         Position(position), Normal(normal), TexCoord(texCoord)
     {
     };

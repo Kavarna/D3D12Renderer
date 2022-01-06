@@ -142,7 +142,7 @@ bool Engine::OnResize(uint32_t width, uint32_t height)
 
     for (auto& frameResource : mFrameResources)
     {
-        CHECKCONT(frameResource.OnResize(width, height), false, "Unable to resize frame resources");
+        CHECKCONT(frameResource.OnResize(width, height), "Unable to resize frame resources");
     }
 
     CHECK(OnResize(), false, "Unable to resize application");

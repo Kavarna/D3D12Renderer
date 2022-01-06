@@ -21,12 +21,12 @@ public:
 
     constexpr bool Valid() noexcept
     {
-        return has_value();
+        return this->has_value();
     }
 
     constexpr bool Invalid() noexcept
     {
-        return !has_value();
+        return !Valid();
     }
 
     constexpr T &&Get() noexcept
