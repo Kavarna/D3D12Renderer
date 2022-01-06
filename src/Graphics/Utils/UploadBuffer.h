@@ -17,6 +17,7 @@ public:
     bool Init(unsigned int elementCount = 1, bool isConstantBuffer = false)
     {
         CHECK(D3DObject::Init(), false, "Unable to initialize D3DObject");
+        CHECK(elementCount > 0, true, "Creating an UploadBuffer with 0 elements");
 
         mElementCount = elementCount;
         mElementSize = sizeof(T);
@@ -27,8 +28,6 @@ public:
         }
 
         mTotalSize = mElementSize * mElementCount;
-
-
 
         auto uploadHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mTotalSize);

@@ -155,6 +155,10 @@ bool Engine::OnResize(uint32_t width, uint32_t height)
 bool Engine::OnUpdate()
 {
     float dt = 1.0f / ImGui::GetIO().Framerate;
+    if (ImGui::GetIO().Framerate == 0.0f)
+    {
+        dt = 0.0f;
+    }
 
     auto d3d = Direct3D::Get();
     mCurrentFrameResourceIndex = (mCurrentFrameResourceIndex + 1) % Direct3D::kBufferCount;
@@ -242,7 +246,7 @@ bool Engine::InitFrameResources()
 
     MaterialManager::Get()->CloseAddingMaterials();
     uint32_t numModels = GetModelCount();
-    uint32_t numPasses = 1;
+    uint32_t numPasses = GetPassCount();
     uint32_t numMaterials = MaterialManager::Get()->GetNumMaterials();
     auto instances = GetInstanceCount();
 
@@ -373,7 +377,7 @@ LRESULT Engine::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-std::unordered_map<void *, uint32_t> Engine::GetInstanceCount()
+std::unordered_map<uuids::uuid, uint32_t> Engine::GetInstanceCount()
 {
-    return std::unordered_map<void *, uint32_t>();
+    return std::unordered_map<uuids::uuid, uint32_t>();
 }

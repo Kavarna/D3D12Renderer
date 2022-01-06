@@ -6,7 +6,7 @@
 
 
 OBLIVION_ALIGN(16)
-class OrthographicCamera : public UpdateObject, public ICamera
+class OrthographicCamera : public ICamera
 {
 public:
     OrthographicCamera() = default;
@@ -26,6 +26,9 @@ public:
 
     const DirectX::XMMATRIX &__vectorcall GetView() const;
     const DirectX::XMMATRIX &__vectorcall GetProjection() const;
+    const DirectX::XMVECTOR& __vectorcall GetDirection() const override;
+    const DirectX::XMVECTOR& __vectorcall GetRightDirection() const override;
+    const DirectX::XMVECTOR& __vectorcall GetPosition() const override;
 
 private:
 

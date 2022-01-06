@@ -59,18 +59,14 @@ const DirectX::XMMATRIX &__vectorcall Camera::GetProjection() const
     return mProjectionMatrix;
 }
 
-DirectX::XMFLOAT3 Camera::GetPosition() const
+const DirectX::XMVECTOR& __vectorcall Camera::GetPosition() const
 {
-    DirectX::XMFLOAT3 position;
-    DirectX::XMStoreFloat3(&position, mPosition);
-    return position;
+    return mPosition;
 }
 
-DirectX::XMFLOAT3 Camera::GetDirection() const
+const DirectX::XMVECTOR& __vectorcall Camera::GetDirection() const
 {
-    DirectX::XMFLOAT3 direction;
-    DirectX::XMStoreFloat3(&direction, mForwadDirection);
-    return direction;
+    return mForwadDirection;
 }
 
 DirectX::XMFLOAT3 Camera::GetUpDirection() const
@@ -80,11 +76,14 @@ DirectX::XMFLOAT3 Camera::GetUpDirection() const
     return upDirection;
 }
 
-DirectX::XMFLOAT3 Camera::GetRightDirection() const
+void __vectorcall Camera::SetPosition(const DirectX::XMVECTOR& position)
 {
-    DirectX::XMFLOAT3 rightDirection;
-    DirectX::XMStoreFloat3(&rightDirection, mRightDirection);
-    return rightDirection;
+    mPosition = position;
+}
+
+const DirectX::XMVECTOR& __vectorcall Camera::GetRightDirection() const
+{
+    return mRightDirection;
 }
 
 void Camera::MoveForward(float dt)

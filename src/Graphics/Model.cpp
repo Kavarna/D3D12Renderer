@@ -38,22 +38,22 @@ uint32_t Model::GetStartIndexLocation() const
 
 void Model::SetMaterial(MaterialManager::Material const *newMaterial)
 {
-	mMaterial = newMaterial;
+	mInfo.Material = newMaterial;
 }
 
 MaterialManager::Material const *Model::GetMaterial() const
 {
-	return mMaterial;
+	return mInfo.Material;
 }
 
-const DirectX::XMMATRIX &__vectorcall Model::GetWorld(unsigned int instanceID) const
+const InstanceInfo& __vectorcall Model::GetInstanceInfo(unsigned int instanceID) const
 {
-	return mInstancesInfo[instanceID].instanceInfo.WorldMatrix;
+    return mInstancesInfo[instanceID].instanceInfo;
 }
 
-const DirectX::XMMATRIX &__vectorcall Model::GetTexWorld(unsigned int instanceID) const
+InstanceInfo& __vectorcall Model::GetInstanceInfo(unsigned int instanceID)
 {
-	return mInstancesInfo[instanceID].instanceInfo.TexWorld;
+	return mInstancesInfo[instanceID].instanceInfo;
 }
 
 void Model::Identity(unsigned int instanceID)
@@ -154,9 +154,9 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	auto materialInfoResult = ProcessMaterialFromMesh(mesh, scene);
 	CHECK(materialInfoResult.Valid(), false, "[Loading Model {}] Cannot get material from mesh {}", path, meshName);
 	auto [materialName, materialInfo] = materialInfoResult.Get();
-	mMaterial = MaterialManager::Get()->AddMaterial(
+	auto* material = MaterialManager::Get()->AddMaterial(
 		GetMaxDirtyFrames(), materialName, materialInfo);
-	CHECK(mMaterial != nullptr, false, "[Loading Model {}] Cannot add material {} to material manager ", path, materialName);
+	CHECK(material != nullptr, false, "[Loading Model {}] Cannot add material {} to material manager ", path, materialName);
 
 	std::vector<Vertex> vertices;
 	vertices.reserve(mesh->mNumVertices);
@@ -169,6 +169,9 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 
 		vertices.push_back(std::move(currentVertex));
 	}
+
+	mBoundingBox.CreateFromPoints(mBoundingBox, vertices.size(), (DirectX::XMFLOAT3*)vertices.data(), sizeof(vertices[0]));
+	mBoundingSphere.CreateFromPoints(mBoundingSphere, vertices.size(), (DirectX::XMFLOAT3*)vertices.data(), sizeof(vertices[0]));
 
 	std::vector<uint32_t> indices;
 	indices.reserve(mesh->mNumFaces * 3);
@@ -187,6 +190,7 @@ bool Model::ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string
 	mModelsRenderParameters[meshName].StartIndexLocation = (uint32_t)mIndices.size();
 	mModelsRenderParameters[meshName].VertexCount = (uint32_t)vertices.size();
 	mModelsRenderParameters[meshName].IndexCount = (uint32_t)indices.size();
+	mModelsRenderParameters[meshName].Material = material;
 
 	mVertices.reserve(mVertices.size() + (uint32_t)vertices.size());
 	std::move(std::begin(vertices), std::end(vertices), std::back_inserter(mVertices));
@@ -225,7 +229,7 @@ Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMes
 	if (currentMaterial->Get(AI_MATKEY_COLOR_SPECULAR, fresnel) != aiReturn::aiReturn_SUCCESS)
 	{
 		fresnel = { 0.25f, 0.25f, 0.25f };
-		SHOWWARNING("Unable get specular color for material {}. Using default { 0.25, 0.25, 0.25 }", materialName);
+		SHOWWARNING("Unable get specular color for material {}. Using default ( 0.25, 0.25, 0.25 )", materialName);
 	}
 	aiString texturePath;
 	materialInfo.textureIndex = -1;
@@ -270,7 +274,7 @@ bool Model::Create(ModelType type)
 			SHOWFATAL("Model type {} is not a valid model for Create(ModelType) function. Try using another specialized function", (int)type);
 			return false;
 	}
-	AddInstance();
+	AddInstance(InstanceInfo());
 
     return true;
 }
@@ -283,11 +287,11 @@ bool Model::Create(const std::string &path)
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
 											  aiProcess_ConvertToLeftHanded);
-
+	CHECK(pScene != nullptr, false, "Unable to load model located at path {}", path);
 
 	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,
-		  "Unable to load model located at path {}", path);
-	AddInstance();
+		  "Unable to process model located at path {}", path);
+	AddInstance(InstanceInfo());
 
 	return true;
 }
@@ -301,16 +305,17 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path)
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+	D3DObject::Init();
 	return Create(path);
 }
 
-Result<uint32_t> Model::AddInstance(const DirectX::XMMATRIX &worldMatrix, const DirectX::XMMATRIX &texMatrix, void* Context)
+Result<uint32_t> Model::AddInstance(const InstanceInfo& instanceInfo, void* Context)
 {
 	CHECK(mCanAddInstances, std::nullopt, "Model stopped for adding instances...");
 	
 	uint32_t start = (uint32_t)mInstancesInfo.size();
 
-	mInstancesInfo.push_back(ModelInstanceInfo({ worldMatrix, texMatrix }, Context));
+	mInstancesInfo.push_back(ModelInstanceInfo(instanceInfo, Context));
 
 	return start;
 }
@@ -320,17 +325,17 @@ void Model::ClearInstances()
 	mInstancesInfo.clear();
 }
 
-uint32_t Model::PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &)> func,
-								 std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer)
+uint32_t Model::PrepareInstances(std::function<bool(InstanceInfo&)> func,
+								 std::unordered_map<uuids::uuid, UploadBuffer<InstanceInfo>> &instancesBuffer)
 {
-	if (auto instanceIt = instancesBuffer.find((void *)this); instanceIt != instancesBuffer.end())
+    if (auto instanceIt = instancesBuffer.find(mObjectUUID); instanceIt != instancesBuffer.end())
 	{
 		auto& instanceInfo = (*instanceIt).second;
 
 		unsigned int bufferIndex = 0;
 		for (auto &it : mInstancesInfo)
 		{
-			if (func(it.instanceInfo.WorldMatrix, it.instanceInfo.TexWorld))
+			if (func(it.instanceInfo))
 			{
 				instanceInfo.CopyData(&it.instanceInfo, bufferIndex++);
 			}
@@ -344,17 +349,17 @@ uint32_t Model::PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX
 	}
 }
 
-uint32_t Model::PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &, void *Context)> func,
-								 std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer)
+uint32_t Model::PrepareInstances(std::function<bool(InstanceInfo&, void* Context)> func,
+								 std::unordered_map<uuids::uuid, UploadBuffer<InstanceInfo>> &instancesBuffer)
 {
-	if (auto instanceIt = instancesBuffer.find((void *)this); instanceIt != instancesBuffer.end())
+    if (auto instanceIt = instancesBuffer.find(mObjectUUID); instanceIt != instancesBuffer.end())
 	{
 		auto &instanceInfo = (*instanceIt).second;
 
 		unsigned int bufferIndex = 0;
 		for (auto &it : mInstancesInfo)
 		{
-			if (func(it.instanceInfo.WorldMatrix, it.instanceInfo.TexWorld, it.Context))
+			if (func(it.instanceInfo, it.Context))
 			{
 				instanceInfo.CopyData(&it.instanceInfo, bufferIndex++);
 			}
@@ -366,6 +371,23 @@ uint32_t Model::PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX
 		SHOWWARNING("Attempting to prepare instances on a model that is not in the instances buffer");
 		return 0;
 	}
+}
+
+uint32_t Model::PrepareInstances(std::unordered_map<uuids::uuid, UploadBuffer<InstanceInfo>>& instancesBuffer)
+{
+    if (auto instanceIt = instancesBuffer.find(mObjectUUID); instanceIt != instancesBuffer.end()) {
+        auto& instanceInfo = (*instanceIt).second;
+
+		unsigned int bufferIndex = 0;
+        for (auto& it : mCurrentInstances) {
+            instanceInfo.CopyData(&it->instanceInfo, bufferIndex++);
+        }
+
+		return bufferIndex;
+    } else {
+        SHOWWARNING("Attempting to prepare instances on a model that is not in the instances buffer");
+        return 0;
+    }
 }
 
 void Model::BindInstancesBuffer(ID3D12GraphicsCommandList *cmdList, uint32_t instanceCount,
@@ -397,14 +419,14 @@ void Model::CloseAddingInstances()
 	mCanAddInstances = false;
 }
 
-bool Model::ShouldRender() const
+const DirectX::BoundingBox& Model::GetBoundingBox() const
 {
-	return mShouldRender;
+	return mBoundingBox;
 }
 
-void Model::SetShouldRender(bool shouldRender)
+const DirectX::BoundingSphere& Model::GetBoundingSphere() const
 {
-	mShouldRender = shouldRender;
+	return mBoundingSphere;
 }
 
 bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2])
@@ -445,6 +467,16 @@ void Model::Destroy()
 {
 	mVertexBuffer.Reset();
 	mIndexBuffer.Reset();
+}
+
+void Model::ResetCurrentInstances()
+{
+	this->mCurrentInstances.clear();
+}
+
+void Model::AddCurrentInstance(uint32_t index)
+{
+	this->mCurrentInstances.push_back(&mInstancesInfo[index]);
 }
 
 bool Model::CreateTriangle()
@@ -599,7 +631,7 @@ bool Model::CreatePrimitive(const InitializationInfo & initInfo)
 
 	if constexpr (std::is_same_v<InitializationInfo, GridInitializationInfo>)
 	{
-		AddInstance();
+		AddInstance(InstanceInfo());
 		return CreateGrid(initInfo);
 	}
 	else

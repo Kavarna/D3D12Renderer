@@ -1,6 +1,7 @@
 #include "PipelineManager.h"
 #include "Direct3D.h"
 #include "Conversions.h"
+#include "Utils/BatchRenderer.h"
 
 std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> GetSamplers()
 {
@@ -105,6 +106,8 @@ bool PipelineManager::InitRootSignatures()
     CHECK(InitObjectFrameMaterialRootSignature(), false, "Unable to initialize object frame material root signature");
     CHECK(InitTextureOnlyRootSignature(), false, "Unable to initialize texture only root signature");
     CHECK(InitTextureSrvUavBufferRootSignature(), false, "Unable to initialize texture srv uav and buffer signature");
+    CHECK(InitPassMaterialLightsTextureInstance(), false, "Unable to initialize pass material light texture instance signature");
+    CHECK(InitOneCBV(), false, "Unable to initialize one CBV root signature");
 
     SHOWINFO("Successfully initialized all root signatures");
     return true;
@@ -118,6 +121,8 @@ bool PipelineManager::InitPipelines()
     CHECK(InitBlurPipelines(), false, "Unable to initialize blur pipelines");
     CHECK(InitInstancedMaterialLightPipeline(), false, "Unable to initialize material light pipeline");
     CHECK(InitTerrainPipeline(), false, "Unable to initialize terrain pipeline");
+    CHECK(InitInstancedMaterialColorLightPipeline(), false, "Unable to initialize instanced material color light pipeline");
+    CHECK(InitDebugPipeline(), false, "Unable to initialize debug pipeline");
 
     SHOWINFO("Successfully initialized all pipelines");
     return true;
@@ -248,6 +253,60 @@ bool PipelineManager::InitTextureSrvUavBufferRootSignature()
     return true;
 }
 
+bool PipelineManager::InitPassMaterialLightsTextureInstance()
+{
+    auto d3d = Direct3D::Get();
+    auto type = RootSignatureType::PassMaterialLightsTextureInstance;
+
+
+    CD3DX12_DESCRIPTOR_RANGE srvRanges[1];
+    srvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+
+    CD3DX12_ROOT_PARAMETER parameters[5];
+    parameters[0].InitAsConstantBufferView(0); // PerFrame
+    parameters[1].InitAsConstantBufferView(1); // Material
+    parameters[2].InitAsConstantBufferView(2); // Lights
+    parameters[3].InitAsShaderResourceView(0, 1, D3D12_SHADER_VISIBILITY_VERTEX); // Instance
+    parameters[4].InitAsDescriptorTable(ARRAYSIZE(srvRanges), srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
+    signatureDesc.NumParameters = ARRAYSIZE(parameters);
+    signatureDesc.pParameters = parameters;
+    signatureDesc.NumStaticSamplers = (uint32_t)mSamplers.size();
+    signatureDesc.pStaticSamplers = mSamplers.data();
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    auto signature = d3d->CreateRootSignature(signatureDesc);
+    CHECK(signature.Valid(), false, "Unable to create a valid PassMaterialLightsTextureInstance signature");
+    mRootSignatures[type] = signature.Get();
+
+    SHOWINFO("Successfully initialized PassMaterialLightsTextureInstance");
+    return true;
+}
+
+bool PipelineManager::InitOneCBV()
+{
+    auto d3d = Direct3D::Get();
+    auto type = RootSignatureType::OneCBV;
+
+    CD3DX12_ROOT_PARAMETER parameters[1];
+    parameters[0].InitAsConstantBufferView(0); // PerFrame
+
+    D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
+    signatureDesc.NumParameters = ARRAYSIZE(parameters);
+    signatureDesc.pParameters = parameters;
+    signatureDesc.NumStaticSamplers = (uint32_t)mSamplers.size();
+    signatureDesc.pStaticSamplers = mSamplers.data();
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    auto signature = d3d->CreateRootSignature(signatureDesc);
+    CHECK(signature.Valid(), false, "Unable to create a valid OneCBV signature");
+    mRootSignatures[type] = signature.Get();
+
+    SHOWINFO("Successfully initialized OneCBV");
+    return true;
+}
+
 bool PipelineManager::InitSimpleColorPipeline()
 {
     auto d3d = Direct3D::Get();
@@ -261,7 +320,7 @@ bool PipelineManager::InitSimpleColorPipeline()
     simpleColorPipeline.CachedPSO.pCachedBlob = nullptr;
     simpleColorPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
     simpleColorPipeline.DepthStencilState.StencilEnable = FALSE;
-    simpleColorPipeline.DepthStencilState.DepthEnable = TRUE;
+    simpleColorPipeline.DepthStencilState.DepthEnable = FALSE;
     simpleColorPipeline.DSVFormat = Direct3D::kDepthStencilFormat;
     simpleColorPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
     simpleColorPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
@@ -596,5 +655,112 @@ bool PipelineManager::InitTerrainPipeline()
     mPipelineToRootSignature[type] = rootSignatureType;
 
     SHOWINFO("Successfully initialized material light pipeline");
+    return true;
+}
+
+bool PipelineManager::InitInstancedMaterialColorLightPipeline()
+{
+    auto d3d = Direct3D::Get();
+    PipelineType type = PipelineType::InstancedColorMaterialLight;
+    RootSignatureType rootSignatureType = RootSignatureType::PassMaterialLightsTextureInstance;
+
+    auto layoutDesc = PositionNormalTexCoordVertex::GetInputElementDesc();
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc = {};
+    pipelineDesc.NodeMask = 0;
+    pipelineDesc.BlendState = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT());
+    pipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+    pipelineDesc.DSVFormat = d3d->kDepthStencilFormat;
+    pipelineDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+    pipelineDesc.InputLayout.pInputElementDescs = layoutDesc.data();
+    pipelineDesc.InputLayout.NumElements = (uint32_t)layoutDesc.size();
+    pipelineDesc.NumRenderTargets = 1;
+    pipelineDesc.RTVFormats[0] = d3d->kBackbufferFormat;
+    pipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+    pipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
+    // pipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+    pipelineDesc.SampleDesc.Count = 1;
+    pipelineDesc.SampleDesc.Quality = 0;
+    pipelineDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    
+    auto rootSignature = mRootSignatures.find(rootSignatureType);
+    CHECK(!(rootSignature == mRootSignatures.end()), false,
+        "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
+    pipelineDesc.pRootSignature = rootSignature->second.Get();
+
+    ComPtr<ID3DBlob> vertexShader, pixelShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\InstancedColorMaterialLightPipeline_VertexShader.cso", &vertexShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\InstancedColorMaterialLightPipeline_PixelShader.cso", &pixelShader), false);
+
+    pipelineDesc.VS.BytecodeLength = vertexShader->GetBufferSize();
+    pipelineDesc.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+    pipelineDesc.PS.BytecodeLength = pixelShader->GetBufferSize();
+    pipelineDesc.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+
+    auto pipeline = d3d->CreatePipelineState(pipelineDesc);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(vertexShader);
+    mShaders[type].push_back(pixelShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
+    SHOWINFO("Successfully initialized instanced material light color pipeline");
+    return true;
+}
+
+bool PipelineManager::InitDebugPipeline()
+{
+    auto d3d = Direct3D::Get();
+    PipelineType type = PipelineType::DebugPipeline;
+    RootSignatureType rootSignatureType = RootSignatureType::OneCBV;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC simpleColorPipeline = {};
+
+    simpleColorPipeline.NodeMask = 0;
+    simpleColorPipeline.BlendState = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT());
+    simpleColorPipeline.CachedPSO.CachedBlobSizeInBytes = 0;
+    simpleColorPipeline.CachedPSO.pCachedBlob = nullptr;
+    simpleColorPipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+    simpleColorPipeline.DepthStencilState.StencilEnable = FALSE;
+    simpleColorPipeline.DepthStencilState.DepthEnable = TRUE;
+    simpleColorPipeline.DSVFormat = Direct3D::kDepthStencilFormat;
+    simpleColorPipeline.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+    simpleColorPipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+    simpleColorPipeline.NumRenderTargets = 1;
+    simpleColorPipeline.RTVFormats[0] = Direct3D::kBackbufferFormat;
+    simpleColorPipeline.SampleDesc.Count = 1;
+    simpleColorPipeline.SampleDesc.Quality = 0;
+    simpleColorPipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    simpleColorPipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+    simpleColorPipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+
+    auto rootSignature = mRootSignatures.find(rootSignatureType);
+    CHECK(!(rootSignature == mRootSignatures.end()), false,
+        "Unable to find empty root signature for pipeline type {}", PipelineTypeString[int(type)]);
+    simpleColorPipeline.pRootSignature = rootSignature->second.Get();
+
+    auto elementDesc = PositionColorVertex::GetInputElementDesc();
+    simpleColorPipeline.InputLayout.NumElements = (uint32_t)elementDesc.size();
+    simpleColorPipeline.InputLayout.pInputElementDescs = elementDesc.data();
+
+    ComPtr<ID3DBlob> vertexShader, pixelShader;
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\Debug_VertexShader.cso", &vertexShader), false);
+    CHECK_HR(D3DReadFileToBlob(L"Shaders\\Debug_PixelShader.cso", &pixelShader), false);
+
+    simpleColorPipeline.VS.BytecodeLength = vertexShader->GetBufferSize();
+    simpleColorPipeline.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+    simpleColorPipeline.PS.BytecodeLength = pixelShader->GetBufferSize();
+    simpleColorPipeline.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+
+    auto pipeline = d3d->CreatePipelineState(simpleColorPipeline);
+    CHECK(pipeline.Valid(), false, "Unable to create pipeline type {}", PipelineTypeString[int(type)]);
+
+    mPipelines[type] = pipeline.Get();
+    mShaders[type].push_back(vertexShader);
+    mShaders[type].push_back(pixelShader);
+    mPipelineToRootSignature[type] = rootSignatureType;
+
+    SHOWINFO("Successfully initialized debug pipeline");
     return true;
 }

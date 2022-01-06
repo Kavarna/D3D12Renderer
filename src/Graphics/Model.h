@@ -12,7 +12,7 @@
 #include <assimp\postprocess.h>
 #include <assimp\mesh.h>
 
-class Model : public UpdateObject
+class Model : public UpdateObject, public D3DObject
 {
     using Vertex = PositionNormalTexCoordVertex;
 public:
@@ -20,7 +20,7 @@ public:
     {
         Triangle = 0, Square, Grid
     };
-    static constexpr const char *ModelTypeString[] =
+    static constexpr const char* ModelTypeString[] =
     {
         "Triangle", "Square", "Grid"
     };
@@ -42,33 +42,37 @@ public:
 public:
     bool Create(ModelType type);
     template <typename InitializationInfo>
-    bool CreatePrimitive(const InitializationInfo &);
-    bool Create(const std::string &path);
+    bool CreatePrimitive(const InitializationInfo&);
+    bool Create(const std::string& path);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
-    bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string &path);
+    bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string& path);
 
-    Result<uint32_t> AddInstance(const DirectX::XMMATRIX &worldMatrix = DirectX::XMMatrixIdentity(),
-                                 const DirectX::XMMATRIX &texMatrix = DirectX::XMMatrixIdentity(),
-                                 void* Context = nullptr);
+    Result<uint32_t> AddInstance(const InstanceInfo& info,
+        void* Context = nullptr);
     void ClearInstances();
     uint32_t GetInstanceCount() const;
 
-    uint32_t PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &)>,
-                              std::unordered_map<void *, UploadBuffer<InstanceInfo>> &);
-    uint32_t PrepareInstances(std::function<bool(DirectX::XMMATRIX &, DirectX::XMMATRIX &, void* Context)>,
-                              std::unordered_map<void *, UploadBuffer<InstanceInfo>> &);
-    void BindInstancesBuffer(ID3D12GraphicsCommandList *cmdList, uint32_t instanceCount,
-                             const std::unordered_map<void *, UploadBuffer<InstanceInfo>> &instancesBuffer);
+    uint32_t PrepareInstances(std::function<bool(InstanceInfo&)>,
+        std::unordered_map<uuids::uuid, UploadBuffer<InstanceInfo>>&);
+    uint32_t PrepareInstances(std::function<bool(InstanceInfo&, void* Context)>,
+        std::unordered_map<uuids::uuid, UploadBuffer<InstanceInfo>>&);
+    uint32_t PrepareInstances(std::unordered_map<uuids::uuid, UploadBuffer<InstanceInfo>>&);
+    void BindInstancesBuffer(ID3D12GraphicsCommandList* cmdList, uint32_t instanceCount,
+        const std::unordered_map<void*, UploadBuffer<InstanceInfo>>& instancesBuffer);
 
     void CloseAddingInstances();
 
-    bool ShouldRender() const;
-    void SetShouldRender(bool shouldRender);
+    const DirectX::BoundingBox& GetBoundingBox() const;
+    const DirectX::BoundingSphere& GetBoundingSphere() const;
 
 public:
-    static bool InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
+    static bool InitBuffers(ID3D12GraphicsCommandList* cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
+
+public:
+    void ResetCurrentInstances();
+    void AddCurrentInstance(uint32_t index);
 
 public:
     uint32_t GetIndexCount() const;
@@ -76,11 +80,11 @@ public:
     uint32_t GetBaseVertexLocation() const;
     uint32_t GetStartIndexLocation() const;
 
-    void SetMaterial(const MaterialManager::Material *);
-    MaterialManager::Material const *GetMaterial() const;
+    void SetMaterial(const MaterialManager::Material*);
+    MaterialManager::Material const* GetMaterial() const;
 
-    const DirectX::XMMATRIX &__vectorcall GetWorld(unsigned int instanceID = 0) const;
-    const DirectX::XMMATRIX &__vectorcall GetTexWorld(unsigned int instanceID = 0) const;
+    const InstanceInfo& __vectorcall GetInstanceInfo(unsigned int instanceID = 0) const;
+    InstanceInfo& __vectorcall GetInstanceInfo(unsigned int instanceID = 0);
 
     void Identity(unsigned int instanceID = 0);
     void Translate(float x, float y, float z, unsigned int instanceID = 0);
@@ -91,9 +95,9 @@ public:
     void Scale(float scaleFactorX, float scaleFactorY, float scaleFactorZ, unsigned int instanceID = 0);
 
 private:
-    bool ProcessNode(aiNode *node, const aiScene *scene, const std::string &path);
-    bool ProcessMesh(uint32_t meshId, const aiScene *scene, const std::string &path);
-    Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh *mesh, const aiScene *scene);
+    bool ProcessNode(aiNode* node, const aiScene* scene, const std::string& path);
+    bool ProcessMesh(uint32_t meshId, const aiScene* scene, const std::string& path);
+    Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh* mesh, const aiScene* scene);
 
 private:
     static std::vector<Vertex> mVertices;
@@ -111,6 +115,7 @@ private:
         uint32_t VertexCount;
         uint32_t BaseVertexLocation;
         uint32_t StartIndexLocation;
+        MaterialManager::Material const* Material = nullptr;
     };
 
     static std::unordered_map<std::string, RenderParameters> mModelsRenderParameters;
@@ -119,25 +124,27 @@ private:
 private:
     bool CreateTriangle();
     bool CreateSquare();
-    bool CreateGrid(const GridInitializationInfo &);
+    bool CreateGrid(const GridInitializationInfo&);
 
 private:
     bool mCanAddInstances = true;
-    
+
     struct ModelInstanceInfo
     {
-        ModelInstanceInfo(const InstanceInfo &instanceInfo, void *Context = nullptr):
+        ModelInstanceInfo(const InstanceInfo& instanceInfo, void* Context = nullptr) :
             instanceInfo(instanceInfo), Context(Context)
         {
         }
 
         InstanceInfo instanceInfo;
-        void *Context;
+        void* Context;
     };
 
     std::vector<ModelInstanceInfo> mInstancesInfo;
+    std::vector<ModelInstanceInfo*> mCurrentInstances;
+
+    DirectX::BoundingBox mBoundingBox;
+    DirectX::BoundingSphere mBoundingSphere;
 
     RenderParameters mInfo;
-    MaterialManager::Material const *mMaterial = nullptr;
-    bool mShouldRender = true;
 };

@@ -5,6 +5,7 @@
 #include "Model.h"
 #include "FrameResources.h"
 #include "Camera.h"
+#include "ThirdPersonCamera.h"
 #include "SceneLight.h"
 #include "BlurFilter.h"
 #include "OrthographicCamera.h"
@@ -29,11 +30,12 @@ protected:
     virtual bool OnRender(ID3D12GraphicsCommandList *cmdList, FrameResources* frameResources) = 0;
     virtual bool OnRenderGUI() = 0;
     virtual bool OnResize() = 0;
-    virtual std::unordered_map<void *, uint32_t> GetInstanceCount();
+    virtual std::unordered_map<uuids::uuid, uint32_t> GetInstanceCount();
 
     virtual ID3D12PipelineState *GetBeginFramePipeline() = 0;
 
     virtual uint32_t GetModelCount() = 0;
+    virtual uint32_t GetPassCount() = 0;
 
 protected:
     std::unique_ptr<DirectX::Mouse> mMouse;

@@ -48,14 +48,14 @@ static ID3D12Resource*              g_pFontTextureResource = NULL;
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_hFontSrvCpuDescHandle = {};
 static D3D12_GPU_DESCRIPTOR_HANDLE  g_hFontSrvGpuDescHandle = {};
 
-struct FrameResources
+struct ImguiFrameResources
 {
     ID3D12Resource*     IndexBuffer;
     ID3D12Resource*     VertexBuffer;
     int                 IndexBufferSize;
     int                 VertexBufferSize;
 };
-static FrameResources*  g_pFrameResources = NULL;
+static ImguiFrameResources*  g_pImguiFrameResources = NULL;
 static UINT             g_numFramesInFlight = 0;
 static UINT             g_frameIndex = UINT_MAX;
 
@@ -72,7 +72,7 @@ struct VERTEX_CONSTANT_BUFFER
     float   mvp[4][4];
 };
 
-static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, FrameResources* fr)
+static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImguiFrameResources* fr)
 {
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
@@ -137,7 +137,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     // FIXME: I'm assuming that this only gets called once per frame!
     // If not, we can't just re-allocate the IB or VB, we'll have to do a proper allocator.
     g_frameIndex = g_frameIndex + 1;
-    FrameResources* fr = &g_pFrameResources[g_frameIndex % g_numFramesInFlight];
+    ImguiFrameResources* fr = &g_pImguiFrameResources[g_frameIndex % g_numFramesInFlight];
 
     // Create and grow vertex/index buffers if needed
     if (fr->VertexBuffer == NULL || fr->VertexBufferSize < draw_data->TotalVtxCount)
@@ -617,7 +617,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
 
     for (UINT i = 0; i < g_numFramesInFlight; i++)
     {
-        FrameResources* fr = &g_pFrameResources[i];
+        ImguiFrameResources* fr = &g_pImguiFrameResources[i];
         SafeRelease(fr->IndexBuffer);
         SafeRelease(fr->VertexBuffer);
     }
@@ -635,7 +635,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     g_RTVFormat = rtv_format;
     g_hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
     g_hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
-    g_pFrameResources = new FrameResources[num_frames_in_flight];
+    g_pImguiFrameResources = new ImguiFrameResources[num_frames_in_flight];
     g_numFramesInFlight = num_frames_in_flight;
     g_frameIndex = UINT_MAX;
     IM_UNUSED(cbv_srv_heap); // Unused in master branch (will be used by multi-viewports)
@@ -643,7 +643,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     // Create buffers with a default size (they will later be grown as needed)
     for (int i = 0; i < num_frames_in_flight; i++)
     {
-        FrameResources* fr = &g_pFrameResources[i];
+        ImguiFrameResources* fr = &g_pImguiFrameResources[i];
         fr->IndexBuffer = NULL;
         fr->VertexBuffer = NULL;
         fr->IndexBufferSize = 10000;
@@ -656,8 +656,8 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
 void ImGui_ImplDX12_Shutdown()
 {
     ImGui_ImplDX12_InvalidateDeviceObjects();
-    delete[] g_pFrameResources;
-    g_pFrameResources = NULL;
+    delete[] g_pImguiFrameResources;
+    g_pImguiFrameResources = NULL;
     g_pd3dDevice = NULL;
     g_hFontSrvCpuDescHandle.ptr = 0;
     g_hFontSrvGpuDescHandle.ptr = 0;
