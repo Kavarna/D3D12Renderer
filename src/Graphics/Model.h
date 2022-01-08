@@ -6,6 +6,7 @@
 #include "Vertex.h"
 #include "Utils/UpdateObject.h"
 #include "MaterialManager.h"
+#include "Utils/UploadBuffer.h"
 
 #include <assimp\Importer.hpp>
 #include <assimp\scene.h>
@@ -47,6 +48,8 @@ public:
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string& path);
 
+    bool BuildBottomLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList);
+
     Result<uint32_t> AddInstance(const InstanceInfo& info,
         void* Context = nullptr);
     void ClearInstances();
@@ -67,6 +70,7 @@ public:
 
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList* cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
+    static bool BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList);
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
 
@@ -117,9 +121,18 @@ private:
         uint32_t StartIndexLocation;
         MaterialManager::Material const* Material = nullptr;
     };
-
     static std::unordered_map<std::string, RenderParameters> mModelsRenderParameters;
 
+    struct AccelerationStructureBuffers
+    {
+        ComPtr<ID3D12Resource> scratchBuffer;
+        ComPtr<ID3D12Resource> resultBuffer;
+        UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> instanceBuffer;
+    };
+    static std::vector<AccelerationStructureBuffers> mBottomLevelAccelerationStructures;
+
+    static AccelerationStructureBuffers mTopLevelBuffers;
+    static uint32_t mSizeTLAS;
 
 private:
     bool CreateTriangle();
@@ -145,6 +158,8 @@ private:
 
     DirectX::BoundingBox mBoundingBox;
     DirectX::BoundingSphere mBoundingSphere;
+
+    AccelerationStructureBuffers mBLASBuffers;
 
     RenderParameters mInfo;
 };

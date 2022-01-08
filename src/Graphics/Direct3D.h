@@ -74,6 +74,7 @@ private:
     Result<ComPtr<ID3D12Device>> CreateD3D12Device();
 
 private:
+    bool CheckFeatures(ID3D12Device* device);
     bool UpdateDescriptors();
 
 private:

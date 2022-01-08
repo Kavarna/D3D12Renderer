@@ -13,6 +13,10 @@ D3D12_VERTEX_BUFFER_VIEW Model::mVertexBufferView;
 D3D12_INDEX_BUFFER_VIEW Model::mIndexBufferView;
 
 std::unordered_map<std::string, Model::RenderParameters> Model::mModelsRenderParameters;
+std::vector<Model::AccelerationStructureBuffers> Model::mBottomLevelAccelerationStructures;
+
+Model::AccelerationStructureBuffers Model::mTopLevelBuffers;
+uint32_t Model::mSizeTLAS = 0;
 
 using namespace DirectX;
 
@@ -252,8 +256,64 @@ Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMes
 	return result;
 }
 
+bool Model::BuildBottomLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList)
+{
+	D3D12_GPU_VIRTUAL_ADDRESS vbStartAddress = mVertexBuffer->GetGPUVirtualAddress() + sizeof(decltype(mVertices[0])) * mInfo.BaseVertexLocation;
+	D3D12_GPU_VIRTUAL_ADDRESS ibStartAddress = mIndexBuffer->GetGPUVirtualAddress() + sizeof(decltype(mIndices[0])) * mInfo.StartIndexLocation;
+
+	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
+	geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+	geomDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+	geomDesc.Triangles.VertexCount = mInfo.VertexCount;
+	geomDesc.Triangles.VertexBuffer.StartAddress = vbStartAddress;
+	geomDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+	geomDesc.Triangles.IndexBuffer = ibStartAddress;
+	geomDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+	geomDesc.Triangles.IndexCount = mInfo.IndexCount;
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+	inputs.NumDescs = 1;
+	inputs.pGeometryDescs = &geomDesc;
+	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+
+	ComPtr<ID3D12Device5> device5;
+	CHECK_HR(mDevice.As(&device5), false);
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+	device5->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+	ComPtr<ID3D12Resource> intermediaryResource;
+	std::tie(mBLASBuffers.scratchBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr, (uint32_t)info.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	mBLASBuffers.scratchBuffer->SetName(L"Model scratch buffer");
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+	
+	std::tie(mBLASBuffers.resultBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList,
+		D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr, (uint32_t)info.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+	mBLASBuffers.resultBuffer->SetName(L"Model result buffer");
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.ScratchAccelerationStructureData = mBLASBuffers.scratchBuffer->GetGPUVirtualAddress();
+	asDesc.DestAccelerationStructureData = mBLASBuffers.resultBuffer->GetGPUVirtualAddress();
+
+	cmdList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	barrier.UAV.pResource = mBLASBuffers.resultBuffer.Get();
+	cmdList->ResourceBarrier(1, &barrier);
+
+	mBottomLevelAccelerationStructures.push_back(mBLASBuffers);
+
+	return true;
+}
+
 Model::Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex) : 
-	UpdateObject(maxDirtyFrames, constantBufferIndex)
+	UpdateObject(maxDirtyFrames, constantBufferIndex), D3DObject()
 {
 }
 
@@ -261,6 +321,7 @@ bool Model::Create(ModelType type)
 {
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, ModelType) instead of this");
+	D3DObject::Init();
 	switch (type)
 	{
 		case Model::ModelType::Triangle:
@@ -274,6 +335,7 @@ bool Model::Create(ModelType type)
 			SHOWFATAL("Model type {} is not a valid model for Create(ModelType) function. Try using another specialized function", (int)type);
 			return false;
 	}
+
 	AddInstance(InstanceInfo());
 
     return true;
@@ -283,6 +345,7 @@ bool Model::Create(const std::string &path)
 {
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, std::string) instead of this");
+	D3DObject::Init();
 	Assimp::Importer importer;
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
@@ -299,6 +362,7 @@ bool Model::Create(const std::string &path)
 bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type)
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+	D3DObject::Init();
 	return Create(type);
 }
 
@@ -453,6 +517,65 @@ bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resourc
 	mIndexBufferView.BufferLocation = mIndexBuffer->GetGPUVirtualAddress();
 	mIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
 	mIndexBufferView.SizeInBytes = (uint32_t)sizeof(uint32_t) * (uint32_t)mIndices.size();
+
+	return true;
+}
+
+bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList)
+{
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	inputs.NumDescs = (uint32_t)mBottomLevelAccelerationStructures.size();
+
+	auto device = Direct3D::Get()->GetD3D12Device();
+	ComPtr<ID3D12Device5> device5;
+	CHECK_HR(device.As(&device5), false);
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+	device5->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+	ComPtr<ID3D12Resource> intermediaryResource;
+	std::tie(mTopLevelBuffers.scratchBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr, (uint32_t)info.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+
+	std::tie(mTopLevelBuffers.resultBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+		nullptr, (uint32_t)info.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+	mSizeTLAS = (uint32_t)info.ResultDataMaxSizeInBytes;
+	
+
+	CHECK(mTopLevelBuffers.instanceBuffer.Init((uint32_t)mBottomLevelAccelerationStructures.size()),
+		false, "Cannot create instance buffer for TLAS");
+	CHECK(mBottomLevelAccelerationStructures.size() == 1, false, "Right now only a single model can be accelerated");
+	for (uint32_t i = 0; i < mBottomLevelAccelerationStructures.size(); ++i)
+	{
+		D3D12_RAYTRACING_INSTANCE_DESC* instanceDesc = mTopLevelBuffers.instanceBuffer.GetMappedMemory(i);
+
+		instanceDesc->AccelerationStructure = mBottomLevelAccelerationStructures[i].resultBuffer->GetGPUVirtualAddress();
+		instanceDesc->InstanceID = i;
+		instanceDesc->InstanceMask = 0xff;
+		instanceDesc->Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+		instanceDesc->InstanceContributionToHitGroupIndex = i;
+		DirectX::XMFLOAT3X4 matrix = {};
+		DirectX::XMMATRIX identityMatrix = DirectX::XMMatrixIdentity();
+		DirectX::XMStoreFloat3x4(&matrix, identityMatrix);
+		memcpy(instanceDesc->Transform, &matrix, sizeof(instanceDesc->Transform));
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.Inputs.InstanceDescs = mTopLevelBuffers.instanceBuffer.GetGPUVirtualAddress();
+	asDesc.DestAccelerationStructureData = mTopLevelBuffers.resultBuffer->GetGPUVirtualAddress();
+	asDesc.ScratchAccelerationStructureData = mTopLevelBuffers.scratchBuffer->GetGPUVirtualAddress();
+
+	cmdList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	barrier.UAV.pResource = mTopLevelBuffers.resultBuffer.Get();
+	cmdList->ResourceBarrier(1, &barrier);
 
 	return true;
 }

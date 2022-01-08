@@ -118,6 +118,8 @@ void Engine::OnDestroy()
     d3d->Signal(mFence.Get(), mCurrentFrame);
     d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame++);
 
+    OnClose();
+
     TextureManager::Destroy();
     Model::Destroy();
     PipelineManager::Destroy();
@@ -217,6 +219,7 @@ bool Engine::InitD3D()
     auto commandList = d3d->CreateCommandList(mInitializationCommandAllocator.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
     CHECK(commandList.Valid(), false, "Unable to create a command list from an command allocator");
     mCommandList = commandList.Get();
+    mCommandList->SetName(L"Engine command list");
     CHECK_HR(mCommandList->Close(), false);
 
     auto fence = d3d->CreateFence(0);
