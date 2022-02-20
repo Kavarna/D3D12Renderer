@@ -2,6 +2,9 @@
 #include "Direct3D.h"
 #include "Conversions.h"
 #include "Utils/BatchRenderer.h"
+#include "Utils/RayTracingStructures.h"
+#include "Utils/Utils.h"
+#include <dxcapi.h>
 
 std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> GetSamplers()
 {
@@ -36,8 +39,51 @@ std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> GetSamplers()
     return { wrapLinearSampler, wrapPointSampler, clampLinearSampler, clampPointSampler };
 }
 
+ComPtr<ID3DBlob> CompileLibrary(const wchar_t* filename, const wchar_t* target)
+{
+    ComPtr<IDxcCompiler> compiler;
+    ComPtr<IDxcLibrary> library;
+
+    // Create library & compiler
+    CHECK_HR(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)), nullptr);
+    CHECK_HR(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)), nullptr);
+
+    // Read the shader
+    std::ifstream shaderFile(filename);
+    CHECK(shaderFile.good(), nullptr, "Unable to open file");
+
+    std::stringstream strStream;
+    strStream << shaderFile.rdbuf();
+    std::string shaderContent = strStream.str();
+
+    // Create blob from string
+    ComPtr<IDxcBlobEncoding> textBlob;
+    CHECK_HR(library->CreateBlobWithEncodingFromPinned((void*)shaderContent.data(), (uint32_t)shaderContent.size(), 0, &textBlob), nullptr);
+
+    ComPtr<IDxcOperationResult> result;
+    CHECK_HR(compiler->Compile(textBlob.Get(), filename, L"", target, nullptr, 0, nullptr, 0, nullptr, &result), nullptr);
+
+    HRESULT errorCode;
+    CHECK_HR(result->GetStatus(&errorCode), nullptr);
+    if (FAILED(errorCode))
+    {
+        ComPtr<IDxcBlobEncoding> errorBlob;
+        CHECK_HR(result->GetErrorBuffer(&errorBlob), nullptr);
+        
+        std::string error = Utils::ConvertBlobToString(errorBlob);
+        SHOWFATAL("Error when compiling shader {}", error);
+        return nullptr;
+    }
+
+    ComPtr<ID3DBlob> finalResult;
+    CHECK_HR(result->GetResult((IDxcBlob**)finalResult.GetAddressOf()), nullptr);
+    SHOWINFO("Successfully compiled library");
+    return finalResult;
+}
+
 bool PipelineManager::Init()
 {
+    CHECK(D3DObject::Init(), false, "Unable to initialize d3d object");
     mSamplers = GetSamplers();
 
     CHECK(InitRootSignatures(), false, "Unable to initialize all root signatures");
@@ -123,6 +169,7 @@ bool PipelineManager::InitPipelines()
     CHECK(InitTerrainPipeline(), false, "Unable to initialize terrain pipeline");
     CHECK(InitInstancedMaterialColorLightPipeline(), false, "Unable to initialize instanced material color light pipeline");
     CHECK(InitDebugPipeline(), false, "Unable to initialize debug pipeline");
+    CHECK(InitBasicRaytracingPipeline(), false, "Unable to initialize basic raytracing pipeline");
 
     SHOWINFO("Successfully initialized all pipelines");
     return true;
@@ -142,6 +189,7 @@ bool PipelineManager::InitEmptyRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid empty root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized empty root signature");
     return true;
@@ -165,6 +213,7 @@ bool PipelineManager::InitSimpleColorRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized simple color root signature");
     return true;
@@ -195,6 +244,7 @@ bool PipelineManager::InitObjectFrameMaterialRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid object frame material root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized object frame material root signature");
     return true;
@@ -220,6 +270,7 @@ bool PipelineManager::InitTextureOnlyRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized texture only root signature");
     return true;
@@ -248,6 +299,7 @@ bool PipelineManager::InitTextureSrvUavBufferRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized texture srv uav and buffer signature");
     return true;
@@ -279,6 +331,7 @@ bool PipelineManager::InitPassMaterialLightsTextureInstance()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid PassMaterialLightsTextureInstance signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized PassMaterialLightsTextureInstance");
     return true;
@@ -302,6 +355,7 @@ bool PipelineManager::InitOneCBV()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid OneCBV signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized OneCBV");
     return true;
@@ -762,5 +816,84 @@ bool PipelineManager::InitDebugPipeline()
     mPipelineToRootSignature[type] = rootSignatureType;
 
     SHOWINFO("Successfully initialized debug pipeline");
+    return true;
+}
+
+bool PipelineManager::InitBasicRaytracingPipeline()
+{
+    ComPtr<ID3D12Device5> device5;
+    CHECK_HR(mDevice.As(&device5), false);
+
+    std::array<D3D12_STATE_SUBOBJECT, 10> subobjects;
+    uint32_t index = 0;
+
+    const wchar_t* szRayGen = L"rayGen";
+    const wchar_t* szMiss = L"miss";
+    const wchar_t* szClosestHit = L"chs";
+
+    auto shadersLibrary = CompileLibrary(L"Shaders\\Basic.rt.hlsl", L"lib_6_3");
+    DxilLibrary library(shadersLibrary, { szRayGen, szMiss, szClosestHit });
+    subobjects[index++] = library.stateSubobject; // 0
+
+    HitGroup hitGroup(L"", L"chs", L"HitGroup");
+    subobjects[index++] = hitGroup.stateSubobject; // 1
+
+    CD3DX12_DESCRIPTOR_RANGE ranges[2];
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, 0);
+    ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 1);
+
+    CD3DX12_ROOT_PARAMETER parameters[1];
+    parameters[0].InitAsDescriptorTable(ARRAYSIZE(ranges), ranges);
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+    rootSignatureDesc.NumParameters = 1;
+    rootSignatureDesc.pParameters = parameters;
+
+    LocalRootSignature localRootSignature(device5, rootSignatureDesc);
+    subobjects[index] = localRootSignature.stateSubobject; // 2
+
+    const wchar_t* rayGenAssociations[] =
+    {
+        szRayGen
+    };
+    ExportAssociations exportAssociations(rayGenAssociations, ARRAYSIZE(rayGenAssociations), &subobjects[index++]);
+    subobjects[index++] = exportAssociations.stateSubobject; // 3
+
+    D3D12_ROOT_SIGNATURE_DESC emptyRootSignatureDesc = {};
+    emptyRootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+    emptyRootSignatureDesc.NumParameters = 0;
+    LocalRootSignature emptyRootSignature(device5, emptyRootSignatureDesc);
+    subobjects[index] = emptyRootSignature.stateSubobject; // 4
+
+    const wchar_t* emptyAssociations[] =
+    {
+        szMiss, szClosestHit
+    };
+    ExportAssociations emptyAssociation(emptyAssociations, ARRAYSIZE(emptyAssociations), &subobjects[index++]);
+    subobjects[index++] = emptyAssociation.stateSubobject; // 5
+
+    ShaderConfig config(2 * sizeof(float), 1 * sizeof(float));
+    subobjects[index] = config.stateSubobject; // 6
+
+    const wchar_t* shaderConfigAssociations[] =
+    {
+        szRayGen, szMiss, szClosestHit
+    };
+    ExportAssociations shaderConfigAssociation(shaderConfigAssociations, ARRAYSIZE(shaderConfigAssociations), &subobjects[index++]);
+    subobjects[index++] = shaderConfigAssociation.stateSubobject; // 7
+
+    PipelineConfig pipelineConfig(0);
+    subobjects[index++] = pipelineConfig.stateSubobject; // 8
+
+    GlobalRootSignature globalRootSignature(device5, {});
+    subobjects[index++] = globalRootSignature.stateSubobject; // 9
+
+
+    D3D12_STATE_OBJECT_DESC objectDesc = {};
+    objectDesc.pSubobjects = subobjects.data();
+    objectDesc.NumSubobjects = index;
+    objectDesc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+    CHECK_HR(device5->CreateStateObject(&objectDesc, IID_PPV_ARGS(&mRtStateObject)), false);
+
     return true;
 }

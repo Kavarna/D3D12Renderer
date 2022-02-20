@@ -4,6 +4,7 @@
 #include <Oblivion.h>
 #include "Direct3D.h"
 #include "Vertex.h"
+#include "Utils/D3DObject.h"
 
 enum class PipelineType
 {
@@ -19,16 +20,15 @@ static constexpr const char *PipelineTypeString[] =
 enum class RootSignatureType
 {
     Empty = 0, SimpleColor, ObjectFrameMaterialLights, TextureOnly, TextureSrvUavBuffer,
-    PassMaterialLightsTextureInstance, OneCBV
-
+    PassMaterialLightsTextureInstance, OneCBV,
 };
 static constexpr const char *RootSignatureTypeString[] =
 {
     "Empty", "SimpleColor", "ObjectFrameMaterialLights", "TextureOnly", "TextureSrvUavBuffer",
-    "PassMaterialLightsTextureInstance", "OneCBV"
+    "PassMaterialLightsTextureInstance", "OneCBV",
 };
 
-class PipelineManager : public ISingletone<PipelineManager>
+class PipelineManager : public ISingletone<PipelineManager>, public D3DObject
 {
     MAKE_SINGLETONE_CAPABLE(PipelineManager);
 private:
@@ -55,6 +55,7 @@ private:
     bool InitTextureSrvUavBufferRootSignature();
     bool InitPassMaterialLightsTextureInstance();
     bool InitOneCBV();
+    bool InitOneUAVOneSRVDescriptorTable();
 
 private:
     bool InitSimpleColorPipeline();
@@ -65,6 +66,7 @@ private:
     bool InitTerrainPipeline();
     bool InitInstancedMaterialColorLightPipeline();
     bool InitDebugPipeline();
+    bool InitBasicRaytracingPipeline();
 
 private:
     bool mCreated = false;
@@ -76,5 +78,8 @@ private:
     std::unordered_map<PipelineType, std::vector<ComPtr<ID3DBlob>>> mShaders;
 
     std::unordered_map<RootSignatureType, ComPtr<ID3D12RootSignature>> mRootSignatures;
+    std::unordered_map<RootSignatureType, D3D12_ROOT_SIGNATURE_DESC> mRootSignatureDescs;
+
+    ComPtr<ID3D12StateObject> mRtStateObject;
 };
 

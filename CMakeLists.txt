@@ -52,7 +52,7 @@ make_filters("${GRAPHICS_SRC}")
 make_filters("${INPUT_SRC}")
 make_filters("${RAYTRACING_SHADERS}")
 
-target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib" "Common")
+target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib" "Common" "dxcompiler.lib")
 
 set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 20)
 
