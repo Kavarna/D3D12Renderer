@@ -153,11 +153,12 @@ bool PipelineManager::InitEmptyRootSignature()
     D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
     signatureDesc.NumParameters = 0;
     signatureDesc.NumStaticSamplers = 0;
-    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid empty root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatures[type]->SetName(L"Empty root signature");
     mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized empty root signature");
