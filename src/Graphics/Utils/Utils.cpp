@@ -1,6 +1,8 @@
+#include "Oblivion.h"
 #include "Utils.h"
 
 #include "Conversions.h"
+#include <dxcapi.h>
 
 
 std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>> Utils::CreateDefaultBuffer(ID3D12Device *device,
@@ -52,4 +54,46 @@ std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>> Utils::CreateDefaultB
         }
     }
     return { finalResource, temporaryResource };
+}
+
+ComPtr<ID3DBlob> Utils::CompileLibrary(const wchar_t* filename, const wchar_t* target)
+{
+    ComPtr<IDxcCompiler> compiler;
+    ComPtr<IDxcLibrary> library;
+
+    // Create library & compiler
+    CHECK_HR(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)), nullptr);
+    CHECK_HR(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)), nullptr);
+
+    // Read the shader
+    std::ifstream shaderFile(filename);
+    CHECK(shaderFile.good(), nullptr, "Unable to open file");
+
+    std::stringstream strStream;
+    strStream << shaderFile.rdbuf();
+    std::string shaderContent = strStream.str();
+
+    // Create blob from string
+    ComPtr<IDxcBlobEncoding> textBlob;
+    CHECK_HR(library->CreateBlobWithEncodingFromPinned((void*)shaderContent.data(), (uint32_t)shaderContent.size(), 0, &textBlob), nullptr);
+
+    ComPtr<IDxcOperationResult> result;
+    CHECK_HR(compiler->Compile(textBlob.Get(), filename, L"", target, nullptr, 0, nullptr, 0, nullptr, &result), nullptr);
+
+    HRESULT errorCode;
+    CHECK_HR(result->GetStatus(&errorCode), nullptr);
+    if (FAILED(errorCode))
+    {
+        ComPtr<IDxcBlobEncoding> errorBlob;
+        CHECK_HR(result->GetErrorBuffer(&errorBlob), nullptr);
+
+        std::string error = Utils::ConvertBlobToString(errorBlob);
+        SHOWFATAL("Error when compiling shader {}", error);
+        return nullptr;
+    }
+
+    ComPtr<ID3DBlob> finalResult;
+    CHECK_HR(result->GetResult((IDxcBlob**)finalResult.GetAddressOf()), nullptr);
+    SHOWINFO("Successfully compiled library");
+    return finalResult;
 }

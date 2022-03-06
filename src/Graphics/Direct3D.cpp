@@ -190,6 +190,12 @@ ComPtr<ID3D12Device> Direct3D::GetD3D12Device()
     return mDevice;
 }
 
+ComPtr<ID3D12Resource> Direct3D::GetCurrentBackbufferResource()
+{
+    uint32_t activeBackBuffer = mSwapchain->GetCurrentBackBufferIndex();
+    return mSwapchainResources[activeBackBuffer];
+}
+
 void Direct3D::CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SHADER_RESOURCE_VIEW_DESC &srvDesc,
                                         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {

@@ -5,6 +5,7 @@
 #include "Direct3D.h"
 #include "Vertex.h"
 #include "Utils/D3DObject.h"
+#include "Utils/UploadBuffer.h"
 
 enum class PipelineType
 {
@@ -41,6 +42,7 @@ public:
 public:
     auto GetPipeline(PipelineType pipeline)->Result<ID3D12PipelineState *>;
     auto GetRootSignature(PipelineType pipeline)->Result<ID3D12RootSignature *>;
+    auto GetRootSignature(RootSignatureType rootSignature)->Result<ID3D12RootSignature*>;
     auto GetPipelineAndRootSignature(PipelineType pipeline)->Result<std::tuple<ID3D12PipelineState *, ID3D12RootSignature *>>;
 
 private:
@@ -55,7 +57,6 @@ private:
     bool InitTextureSrvUavBufferRootSignature();
     bool InitPassMaterialLightsTextureInstance();
     bool InitOneCBV();
-    bool InitOneUAVOneSRVDescriptorTable();
 
 private:
     bool InitSimpleColorPipeline();
@@ -66,7 +67,7 @@ private:
     bool InitTerrainPipeline();
     bool InitInstancedMaterialColorLightPipeline();
     bool InitDebugPipeline();
-    bool InitBasicRaytracingPipeline();
+    
 
 private:
     bool mCreated = false;
@@ -79,7 +80,5 @@ private:
 
     std::unordered_map<RootSignatureType, ComPtr<ID3D12RootSignature>> mRootSignatures;
     std::unordered_map<RootSignatureType, D3D12_ROOT_SIGNATURE_DESC> mRootSignatureDescs;
-
-    ComPtr<ID3D12StateObject> mRtStateObject;
 };
 

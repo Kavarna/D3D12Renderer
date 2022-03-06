@@ -261,6 +261,9 @@ bool Model::BuildBottomLevelAccelerationStructure(ID3D12GraphicsCommandList4* cm
 	D3D12_GPU_VIRTUAL_ADDRESS vbStartAddress = mVertexBuffer->GetGPUVirtualAddress() + sizeof(decltype(mVertices[0])) * mInfo.BaseVertexLocation;
 	D3D12_GPU_VIRTUAL_ADDRESS ibStartAddress = mIndexBuffer->GetGPUVirtualAddress() + sizeof(decltype(mIndices[0])) * mInfo.StartIndexLocation;
 
+	SHOWINFO("Vertex count = {}", mInfo.VertexCount);
+	SHOWINFO("Index count = {}", mInfo.IndexCount);
+	SHOWINFO("ibStartAddress = {}", ibStartAddress);
 	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
 	geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -283,6 +286,7 @@ bool Model::BuildBottomLevelAccelerationStructure(ID3D12GraphicsCommandList4* cm
 	CHECK_HR(mDevice.As(&device5), false);
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
 	device5->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+	SHOWINFO("D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO = ({}, {})", info.ResultDataMaxSizeInBytes, info.ScratchDataSizeInBytes);
 
 	ComPtr<ID3D12Resource> intermediaryResource;
 	std::tie(mBLASBuffers.scratchBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
@@ -590,6 +594,16 @@ void Model::Destroy()
 {
 	mVertexBuffer.Reset();
 	mIndexBuffer.Reset();
+
+	mTopLevelBuffers.resultBuffer.Reset();
+	mTopLevelBuffers.scratchBuffer.Reset();
+
+	mBottomLevelAccelerationStructures.clear();
+}
+
+ComPtr<ID3D12Resource> Model::GetTLASBuffer()
+{
+	return mTopLevelBuffers.resultBuffer;
 }
 
 void Model::ResetCurrentInstances()

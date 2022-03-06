@@ -74,6 +74,7 @@ public:
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
 
+    static ComPtr<ID3D12Resource> GetTLASBuffer();
 public:
     void ResetCurrentInstances();
     void AddCurrentInstance(uint32_t index);

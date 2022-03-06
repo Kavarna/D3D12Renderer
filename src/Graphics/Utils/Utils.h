@@ -17,4 +17,6 @@ namespace Utils
         return std::string(info.data());
     }
 
+    ComPtr<ID3DBlob> CompileLibrary(const wchar_t* filename, const wchar_t* target);
+
 }

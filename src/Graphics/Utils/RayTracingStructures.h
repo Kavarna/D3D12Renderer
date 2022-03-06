@@ -3,161 +3,130 @@
 #include <Oblivion.h>
 
 
-struct DxilLibrary
+struct SubobjectWrapper
 {
-    DxilLibrary(ComPtr<ID3DBlob> pBlob, const std::vector<std::wstring>& entrypoints)
+    D3D12_STATE_SUBOBJECT stateSubobject;
+
+    SubobjectWrapper(const void* desc, D3D12_STATE_SUBOBJECT_TYPE subobjectType)
     {
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
-        stateSubobject.pDesc = &libraryDesc;
+        stateSubobject.pDesc = desc;
+        stateSubobject.Type = subobjectType;
+    };
 
-        libraryDesc = {};
-        exportDesc.resize(entrypoints.size());
-        exportName.resize(entrypoints.size());
+    operator D3D12_STATE_SUBOBJECT() const
+    {
+        return stateSubobject;
+    };
+};
 
-        if (pBlob)
+
+struct DxilLibrary : public SubobjectWrapper
+{
+    DxilLibrary(ComPtr<ID3DBlob> shaderBlob, const wchar_t* entrypoints[], uint32_t numEntryPoints) :
+        SubobjectWrapper(&dxilDesc, D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY), shaderBlob(shaderBlob)
+    {
+        dxilDesc.DXILLibrary.BytecodeLength = shaderBlob->GetBufferSize();
+        dxilDesc.DXILLibrary.pShaderBytecode = shaderBlob->GetBufferPointer();
+
+        exportDescs.resize(numEntryPoints);
+        exportNames.resize(numEntryPoints);
+
+        dxilDesc.NumExports = numEntryPoints;
+        dxilDesc.pExports = exportDescs.data();
+        for (uint32_t i = 0; i < numEntryPoints; ++i)
         {
-            libraryDesc.DXILLibrary.BytecodeLength = pBlob->GetBufferSize();
-            libraryDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
-            libraryDesc.NumExports = (uint32_t)entrypoints.size();
-            libraryDesc.pExports = exportDesc.data();
-
-            for (uint32_t i = 0; i < entrypoints.size(); ++i)
-            {
-                exportName[i] = entrypoints[i];
-                exportDesc[i].Name = exportName[i].c_str();
-                exportDesc[i].ExportToRename = nullptr;
-                exportDesc[i].Flags = D3D12_EXPORT_FLAG_NONE;
-            }
+            exportNames[i] = entrypoints[i];
+            exportDescs[i].ExportToRename = nullptr;
+            exportDescs[i].Flags = D3D12_EXPORT_FLAG_NONE;
+            exportDescs[i].Name = exportNames[i].c_str();
         }
     }
 
-    DxilLibrary() : DxilLibrary(nullptr, {}) {};
-
-    D3D12_DXIL_LIBRARY_DESC libraryDesc = {};
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
+    D3D12_DXIL_LIBRARY_DESC dxilDesc = {};
     ComPtr<ID3DBlob> shaderBlob;
-    std::vector<D3D12_EXPORT_DESC> exportDesc;
-    std::vector<std::wstring> exportName;
+    std::vector<D3D12_EXPORT_DESC> exportDescs;
+    std::vector<std::wstring> exportNames;
 };
 
 
-
-struct HitGroup
+struct HitGroup : public SubobjectWrapper
 {
-    HitGroup(const std::wstring& ahsExport_, const std::wstring& chsExport_, const std::wstring& name) :
-        exportName(name), ahsExport(ahsExport_), chsExport(chsExport_)
+    HitGroup(const wchar_t* anyHitShader, const wchar_t* closestHitShader, const std::wstring& name) :
+        SubobjectWrapper(&hitGroupDesc, D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP), exportName(name)
     {
-        desc = {};
-        if (ahsExport.size()) desc.AnyHitShaderImport = ahsExport.c_str();
-        if (chsExport.size()) desc.ClosestHitShaderImport = chsExport.c_str();
-        if (exportName.size()) desc.HitGroupExport = exportName.c_str();
-        desc.IntersectionShaderImport = nullptr;
-        desc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-
-        stateSubobject.pDesc = &desc;
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE::D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+        hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE::D3D12_HIT_GROUP_TYPE_TRIANGLES;
+        hitGroupDesc.AnyHitShaderImport = anyHitShader;
+        hitGroupDesc.ClosestHitShaderImport = closestHitShader;
+        hitGroupDesc.HitGroupExport = exportName.c_str();
     }
 
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
-    D3D12_HIT_GROUP_DESC desc = {};
-    std::wstring exportName, ahsExport, chsExport;
+    D3D12_HIT_GROUP_DESC hitGroupDesc = {};
+    std::wstring exportName;
 };
 
-
-struct LocalRootSignature
+struct LocalRootSignature : public SubobjectWrapper
 {
-    LocalRootSignature(ComPtr<ID3D12Device5> device5, const D3D12_ROOT_SIGNATURE_DESC& desc)
+    LocalRootSignature(const D3D12_ROOT_SIGNATURE_DESC& signatureDesc) :
+        SubobjectWrapper(&localRootSignature, D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE)
     {
         auto d3d = Direct3D::Get();
-
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE::D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
-        stateSubobject.pDesc = &localRootSignature;
-
-        auto rootSignatureResult = d3d->CreateRootSignature(desc);
-        CHECKSHOW(rootSignatureResult.Valid(), "Unable to create a local root signature");
-        rootSignature = rootSignatureResult.Get();
-
-        lrsInterface = rootSignature.Get();
-        localRootSignature.pLocalRootSignature = lrsInterface;
+        auto signatureResult = d3d->CreateRootSignature(signatureDesc);
+        CHECKSHOW(signatureResult.Valid(), "Unable to create a local root signature");
         
+        rootSignature = signatureResult.Get();
+        localRootSignature.pLocalRootSignature = rootSignature.Get();
     }
-
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
-    D3D12_LOCAL_ROOT_SIGNATURE localRootSignature;
-
+    D3D12_LOCAL_ROOT_SIGNATURE localRootSignature = {};
     ComPtr<ID3D12RootSignature> rootSignature;
-    ID3D12RootSignature* lrsInterface;
 };
 
-
-struct ExportAssociations
+struct ExportAssociation : public SubobjectWrapper
 {
-    ExportAssociations(const WCHAR* exportNames[], uint32_t exportCount, const D3D12_STATE_SUBOBJECT* subobjectToAssociate)
+    ExportAssociation(uint32_t numExports, const wchar_t* exports[], const D3D12_STATE_SUBOBJECT& subobject) :
+        SubobjectWrapper(&exportAssociation, D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION)
     {
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE::D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-
-        association.NumExports = exportCount;
-        association.pExports = exportNames;
-        association.pSubobjectToAssociate = subobjectToAssociate;
-
-        stateSubobject.pDesc = &association;
+        exportAssociation.NumExports = numExports;
+        exportAssociation.pExports = exports;
+        exportAssociation.pSubobjectToAssociate = &subobject;
     }
 
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
-    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION association = {};
+    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION exportAssociation = {};
 };
 
-struct ShaderConfig
+struct ShaderConfig : public SubobjectWrapper
 {
-    ShaderConfig(uint32_t maxAttributeSize, uint32_t maxPayloadSize)
+    ShaderConfig(uint32_t maxAttributeSize, uint32_t maxPayloadSize) :
+        SubobjectWrapper(&shaderConfig, D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG)
     {
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE::D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
-
-        config.MaxAttributeSizeInBytes = maxAttributeSize;
-        config.MaxPayloadSizeInBytes = maxPayloadSize;
-
-        stateSubobject.pDesc = &config;
+        shaderConfig.MaxAttributeSizeInBytes = maxAttributeSize;
+        shaderConfig.MaxPayloadSizeInBytes = maxPayloadSize;
     }
     
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
-    D3D12_RAYTRACING_SHADER_CONFIG config = {};
+    D3D12_RAYTRACING_SHADER_CONFIG shaderConfig = {};
 };
 
-struct PipelineConfig
+struct PipelineConfig : public SubobjectWrapper
 {
-    PipelineConfig(uint32_t maxRecursionDepth)
+    PipelineConfig(uint32_t raytracingDepth) :
+        SubobjectWrapper(&pipelineConfig, D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG)
     {
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE::D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
-
-        pipelineConfig.MaxTraceRecursionDepth = maxRecursionDepth;
-
-        stateSubobject.pDesc = &pipelineConfig;
+        pipelineConfig.MaxTraceRecursionDepth = raytracingDepth;
     }
 
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
     D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig;
 };
 
-
-struct GlobalRootSignature
+struct GlobalRootSignature : public SubobjectWrapper
 {
-    GlobalRootSignature(ComPtr<ID3D12Device5> device5, const D3D12_ROOT_SIGNATURE_DESC& desc)
+    GlobalRootSignature(const D3D12_ROOT_SIGNATURE_DESC& signatureDesc) :
+        SubobjectWrapper(&globalRootSignature, D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE)
     {
         auto d3d = Direct3D::Get();
-        stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE::D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+        auto signatureResult = d3d->CreateRootSignature(signatureDesc);
+        CHECKSHOW(signatureResult.Valid(), "Unable to create a local root signature");
 
-        auto rootSignatureResult = d3d->CreateRootSignature(desc);
-        CHECKSHOW(rootSignatureResult.Valid(), "Unable to create a global root signature");
-        rootSignature = rootSignatureResult.Get();
-
-        grsInterface = rootSignature.Get();
-        globalRootSignature.pGlobalRootSignature = grsInterface;
-
-        stateSubobject.pDesc = &globalRootSignature;
+        globalRootSignature.pGlobalRootSignature = rootSignature.Get();
     }
-
-    D3D12_STATE_SUBOBJECT stateSubobject = {};
     D3D12_GLOBAL_ROOT_SIGNATURE globalRootSignature;
     ComPtr<ID3D12RootSignature> rootSignature;
-    ID3D12RootSignature* grsInterface;
 };
