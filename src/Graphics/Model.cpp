@@ -585,7 +585,7 @@ bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdLi
 		instanceDesc->InstanceID = i;
 		instanceDesc->InstanceMask = 0xff;
 		instanceDesc->Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-		instanceDesc->InstanceContributionToHitGroupIndex = 0;
+		instanceDesc->InstanceContributionToHitGroupIndex = i;
 		DirectX::XMFLOAT3X4 matrix = {};
 		DirectX::XMMATRIX worldMatrix = instancesInfo[i].world;
 		DirectX::XMStoreFloat3x4(&matrix, worldMatrix);
@@ -623,6 +623,16 @@ void Model::Destroy()
 	mTopLevelBuffers.scratchBuffer.Reset();
 
 	mBottomLevelAccelerationStructures.clear();
+}
+
+uint32_t Model::GetTotalInstanceCount()
+{
+	uint32_t countInstances = 0;
+	for (const auto& model : mModels)
+	{
+		 countInstances += model->mInstancesInfo.size();
+	}
+	return countInstances;
 }
 
 ComPtr<ID3D12Resource> Model::GetTLASBuffer()

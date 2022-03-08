@@ -1,12 +1,12 @@
-struct PerFrame
+struct PerInstance
 {
-    float4 Colors[3];
+    float4 Color;
 };
 
 
 RaytracingAccelerationStructure gRtScene : register(t0);
 RWTexture2D<float4> gOutput : register(u0);
-ConstantBuffer<PerFrame> gPerFrame : register(b0);
+ConstantBuffer<PerInstance> gPerInstance : register(b0);
 
 struct RayPayload
 {
@@ -58,5 +58,5 @@ void chs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr
     float3 B = float3(0.0f, 1.0f, 0.0f);
     float3 C = float3(0.0f, 0.0f, 1.0f);
 
-    payload.color = gPerFrame.Colors[instanceID % 3].xyz;
+    payload.color = gPerInstance.Color.xyz;
 }
