@@ -45,9 +45,23 @@ void chs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr
         attribs.barycentrics.y
     );
 
+    uint instanceID = InstanceID();
+
     float3 A = float3(1.0f, 0.0f, 0.0f);
     float3 B = float3(0.0f, 1.0f, 0.0f);
     float3 C = float3(0.0f, 0.0f, 1.0f);
 
-    payload.color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
+    switch (instanceID % 3)
+    {
+    case 0:
+        payload.color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
+        break;
+    case 1:
+        payload.color = C * barycentrics.x + A * barycentrics.y + B * barycentrics.z;
+        break;
+    case 2:
+        payload.color = B * barycentrics.x + C * barycentrics.y + A * barycentrics.z;
+        break;
+    }
+
 }

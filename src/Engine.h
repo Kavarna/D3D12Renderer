@@ -44,7 +44,7 @@ protected:
 
     ComPtr<ID3D12Fence> mFence;
     uint64_t mCurrentFrame = 0;
-    unsigned int mClientWidth = 800, mClientHeight = 600;
+    unsigned int mClientWidth = 1920, mClientHeight = 1080;
 
 private:
     bool InitWindow();

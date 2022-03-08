@@ -105,6 +105,8 @@ private:
     Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh* mesh, const aiScene* scene);
 
 private:
+    static std::unordered_set<Model*> mModels;
+
     static std::vector<Vertex> mVertices;
     static std::vector<uint32_t> mIndices;
 
@@ -128,11 +130,11 @@ private:
     {
         ComPtr<ID3D12Resource> scratchBuffer;
         ComPtr<ID3D12Resource> resultBuffer;
-        UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> instanceBuffer;
     };
     static std::vector<AccelerationStructureBuffers> mBottomLevelAccelerationStructures;
 
     static AccelerationStructureBuffers mTopLevelBuffers;
+    static UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> mRaytracingInstancingBuffer;
     static uint32_t mSizeTLAS;
 
 private:

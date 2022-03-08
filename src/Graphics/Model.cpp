@@ -3,8 +3,10 @@
 #include "Direct3D.h"
 #include "TextureManager.h"
 
+std::unordered_set<Model*> Model::mModels;
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
+UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> Model::mRaytracingInstancingBuffer;
 
 ComPtr<ID3D12Resource> Model::mVertexBuffer;
 ComPtr<ID3D12Resource> Model::mIndexBuffer;
@@ -326,6 +328,7 @@ bool Model::Create(ModelType type)
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, ModelType) instead of this");
 	D3DObject::Init();
+	mModels.insert(this);
 	switch (type)
 	{
 		case Model::ModelType::Triangle:
@@ -340,7 +343,7 @@ bool Model::Create(ModelType type)
 			return false;
 	}
 
-	AddInstance(InstanceInfo());
+	CHECK(AddInstance(InstanceInfo()).Valid(), false, "Unable to add a basic instance");
 
     return true;
 }
@@ -350,6 +353,8 @@ bool Model::Create(const std::string &path)
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, std::string) instead of this");
 	D3DObject::Init();
+	mModels.insert(this);
+
 	Assimp::Importer importer;
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
@@ -358,7 +363,7 @@ bool Model::Create(const std::string &path)
 
 	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,
 		  "Unable to process model located at path {}", path);
-	AddInstance(InstanceInfo());
+	CHECK(AddInstance(InstanceInfo()).Valid(), false, "Unable to add a basic instance");
 
 	return true;
 }
@@ -367,6 +372,7 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
 	D3DObject::Init();
+	mModels.insert(this);
 	return Create(type);
 }
 
@@ -374,6 +380,7 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
 	D3DObject::Init();
+	mModels.insert(this);
 	return Create(path);
 }
 
@@ -527,11 +534,30 @@ bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resourc
 
 bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList)
 {
+	uint32_t countInstances = 0;
+	struct InstanceInfo
+	{
+		ComPtr<ID3D12Resource> bottomLevelStructure;
+		DirectX::XMMATRIX world;
+	};
+	// std::unordered_map<uint32_t, InstanceInfo> instancesInfo;
+	std::vector<InstanceInfo> instancesInfo;
+	for (const auto& model : mModels)
+	{
+		// countInstances += model->mInstancesInfo.size();
+		for (uint32_t i = 0; i < model->mInstancesInfo.size(); ++i)
+		{
+			auto& currentInstance = instancesInfo.emplace_back();
+			currentInstance.bottomLevelStructure = model->mBLASBuffers.resultBuffer;
+			currentInstance.world = model->mInstancesInfo[i].instanceInfo.WorldMatrix;
+		}
+	}
+
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
 	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
 	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	inputs.NumDescs = (uint32_t)mBottomLevelAccelerationStructures.size();
+	inputs.NumDescs = (uint32_t)instancesInfo.size();
 
 	auto device = Direct3D::Get()->GetD3D12Device();
 	ComPtr<ID3D12Device5> device5;
@@ -548,29 +574,27 @@ bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdLi
 		nullptr, (uint32_t)info.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
 	mSizeTLAS = (uint32_t)info.ResultDataMaxSizeInBytes;
-	
 
-	CHECK(mTopLevelBuffers.instanceBuffer.Init((uint32_t)mBottomLevelAccelerationStructures.size()),
-		false, "Cannot create instance buffer for TLAS");
-	CHECK(mBottomLevelAccelerationStructures.size() == 1, false, "Right now only a single model can be accelerated");
-	for (uint32_t i = 0; i < mBottomLevelAccelerationStructures.size(); ++i)
+	CHECK(mRaytracingInstancingBuffer.Init((uint32_t)instancesInfo.size()), false, "Cannot create instance buffer for TLAS");
+
+	for (uint32_t i = 0; i < (uint32_t)instancesInfo.size(); ++i)
 	{
-		D3D12_RAYTRACING_INSTANCE_DESC* instanceDesc = mTopLevelBuffers.instanceBuffer.GetMappedMemory(i);
+		D3D12_RAYTRACING_INSTANCE_DESC* instanceDesc = mRaytracingInstancingBuffer.GetMappedMemory(i);
 
-		instanceDesc->AccelerationStructure = mBottomLevelAccelerationStructures[i].resultBuffer->GetGPUVirtualAddress();
+		instanceDesc->AccelerationStructure = instancesInfo[i].bottomLevelStructure->GetGPUVirtualAddress();
 		instanceDesc->InstanceID = i;
 		instanceDesc->InstanceMask = 0xff;
 		instanceDesc->Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-		instanceDesc->InstanceContributionToHitGroupIndex = i;
+		instanceDesc->InstanceContributionToHitGroupIndex = 0;
 		DirectX::XMFLOAT3X4 matrix = {};
-		DirectX::XMMATRIX identityMatrix = DirectX::XMMatrixIdentity();
-		DirectX::XMStoreFloat3x4(&matrix, identityMatrix);
+		DirectX::XMMATRIX worldMatrix = instancesInfo[i].world;
+		DirectX::XMStoreFloat3x4(&matrix, worldMatrix);
 		memcpy(instanceDesc->Transform, &matrix, sizeof(instanceDesc->Transform));
 	}
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
 	asDesc.Inputs = inputs;
-	asDesc.Inputs.InstanceDescs = mTopLevelBuffers.instanceBuffer.GetGPUVirtualAddress();
+	asDesc.Inputs.InstanceDescs = mRaytracingInstancingBuffer.GetGPUVirtualAddress();
 	asDesc.DestAccelerationStructureData = mTopLevelBuffers.resultBuffer->GetGPUVirtualAddress();
 	asDesc.ScratchAccelerationStructureData = mTopLevelBuffers.scratchBuffer->GetGPUVirtualAddress();
 
