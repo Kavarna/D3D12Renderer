@@ -28,7 +28,6 @@ public:
 
     struct GridInitializationInfo
     {
-
         uint32_t N;
         uint32_t M;
         float width;
@@ -70,11 +69,11 @@ public:
 
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList* cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
-    static bool BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList);
+    static bool BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList, const std::vector<Model>& models);
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
 
-    static uint32_t GetTotalInstanceCount();
+    static uint32_t GetTotalInstanceCount(const std::vector<Model>& models);
 
     static ComPtr<ID3D12Resource> GetTLASBuffer();
 public:
@@ -107,8 +106,6 @@ private:
     Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh* mesh, const aiScene* scene);
 
 private:
-    static std::unordered_set<Model*> mModels;
-
     static std::vector<Vertex> mVertices;
     static std::vector<uint32_t> mIndices;
 

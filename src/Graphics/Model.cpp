@@ -3,7 +3,7 @@
 #include "Direct3D.h"
 #include "TextureManager.h"
 
-std::unordered_set<Model*> Model::mModels;
+
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
 UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> Model::mRaytracingInstancingBuffer;
@@ -328,7 +328,6 @@ bool Model::Create(ModelType type)
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, ModelType) instead of this");
 	D3DObject::Init();
-	mModels.insert(this);
 	switch (type)
 	{
 		case Model::ModelType::Triangle:
@@ -353,7 +352,6 @@ bool Model::Create(const std::string &path)
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, std::string) instead of this");
 	D3DObject::Init();
-	mModels.insert(this);
 
 	Assimp::Importer importer;
 
@@ -372,7 +370,6 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
 	D3DObject::Init();
-	mModels.insert(this);
 	return Create(type);
 }
 
@@ -380,7 +377,6 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
 	D3DObject::Init();
-	mModels.insert(this);
 	return Create(path);
 }
 
@@ -532,7 +528,7 @@ bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resourc
 	return true;
 }
 
-bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList)
+bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList, const std::vector<Model>& models)
 {
 	uint32_t countInstances = 0;
 	struct InstanceInfo
@@ -542,14 +538,14 @@ bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdLi
 	};
 	// std::unordered_map<uint32_t, InstanceInfo> instancesInfo;
 	std::vector<InstanceInfo> instancesInfo;
-	for (const auto& model : mModels)
+	for (const auto& model : models)
 	{
 		// countInstances += model->mInstancesInfo.size();
-		for (uint32_t i = 0; i < model->mInstancesInfo.size(); ++i)
+		for (uint32_t i = 0; i < model.mInstancesInfo.size(); ++i)
 		{
 			auto& currentInstance = instancesInfo.emplace_back();
-			currentInstance.bottomLevelStructure = model->mBLASBuffers.resultBuffer;
-			currentInstance.world = model->mInstancesInfo[i].instanceInfo.WorldMatrix;
+			currentInstance.bottomLevelStructure = model.mBLASBuffers.resultBuffer;
+			currentInstance.world = model.mInstancesInfo[i].instanceInfo.WorldMatrix;
 		}
 	}
 
@@ -625,12 +621,12 @@ void Model::Destroy()
 	mBottomLevelAccelerationStructures.clear();
 }
 
-uint32_t Model::GetTotalInstanceCount()
+uint32_t Model::GetTotalInstanceCount(const std::vector<Model>& models)
 {
 	uint32_t countInstances = 0;
-	for (const auto& model : mModels)
+	for (const auto& model : models)
 	{
-		 countInstances += model->mInstancesInfo.size();
+		 countInstances += (uint32_t)model.mInstancesInfo.size();
 	}
 	return countInstances;
 }

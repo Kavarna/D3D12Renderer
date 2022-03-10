@@ -59,4 +59,11 @@ void chs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr
     float3 C = float3(0.0f, 0.0f, 1.0f);
 
     payload.color = gPerInstance.Color.xyz;
+    // payload.color = float3(1.0f, 1.0f, 0.0f);
+}
+
+[shader("closesthit")]
+void chs1(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
+{
+    payload.color = float3(0.0f, 1.0f, 0.0f);
 }
