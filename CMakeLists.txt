@@ -19,6 +19,7 @@ FILE(GLOB_RECURSE COMPUTE_SHADERS "src/Shaders/Compute*.hlsl")
 FILE(GLOB_RECURSE GEOMETRY_SHADERS "src/Shaders/Geometry*.hlsl")
 FILE(GLOB_RECURSE DOMAIN_SHADERS "src/Shaders/Domain*.hlsl")
 FILE(GLOB_RECURSE HULL_SHADERS "src/Shaders/Hull*.hlsl")
+FILE(GLOB_RECURSE RAYTRACING_SHADERS "src/Shaders/*.rt.hlsl")
 
 add_library(D3D12Renderer
             ${SOURCES}
@@ -32,6 +33,7 @@ add_library(D3D12Renderer
             ${GEOMETRY_SHADERS}
             ${DOMAIN_SHADERS}
             ${HULL_SHADERS}
+            ${RAYTRACING_SHADERS}
             ${SHADERS_COMMON})
 
 
@@ -48,13 +50,14 @@ make_filters("${COMMON}")
 make_filters("${SOURCES}")
 make_filters("${GRAPHICS_SRC}")
 make_filters("${INPUT_SRC}")
+make_filters("${RAYTRACING_SHADERS}")
 
-target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib" "Common")
+target_link_libraries(D3D12Renderer ${CONAN_LIBS} "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib" "Common" "dxcompiler.lib")
 
 set_property(TARGET D3D12Renderer PROPERTY CXX_STANDARD 20)
 
 macro(prepare_shaders _source_list _shader_type _shader_model)
-    foreach(_source IN ITEMS ${_source_list})
+    foreach(_source ${_source_list})
         
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_TYPE "${_shader_type}")
         set_property(SOURCE ${_source} PROPERTY VS_SHADER_MODEL "${_shader_model}")
@@ -68,8 +71,20 @@ macro(prepare_shaders _source_list _shader_type _shader_model)
         get_filename_component(filename  "${_source}" NAME_WE)
         get_filename_component(abs_directory "${_source}" DIRECTORY)
         get_filename_component(directory "${abs_directory}" NAME)
-        set_property(SOURCE ${_source} PROPERTY VS_SHADER_OBJECT_FILE_NAME
-                     "${CURRENT_WORKING_DIRECTORY}\\Shaders\\${directory}_${filename}.cso")
+        set(new_path "${CURRENT_WORKING_DIRECTORY}\\Shaders\\${directory}_${filename}.cso")
+        set_property(SOURCE ${_source} PROPERTY VS_SHADER_OBJECT_FILE_NAME ${new_path})
+
+        message("Preparing shader located at file ${_source} in location ${new_path}")
+    endforeach()
+endmacro()
+
+macro(configure_files _source_list)
+    foreach(_source ${_source_list})
+        get_filename_component(filename  "${_source}" NAME)
+        set(new_path "${CURRENT_WORKING_DIRECTORY}\\Shaders\\${filename}")
+        message("Creating depency of file ${_source} in ${new_path}")
+        set_property(SOURCE ${_source} PROPERTY VS_SETTINGS "ExcludedFromBuild=true")
+        configure_file("${_source}" "${new_path}")
     endforeach()
 endmacro()
 
@@ -79,5 +94,11 @@ prepare_shaders("${COMPUTE_SHADERS}" "Compute" "6.0")
 prepare_shaders("${GEOMETRY_SHADERS}" "Geometry" "6.0")
 prepare_shaders("${DOMAIN_SHADERS}" "Domain" "6.0")
 prepare_shaders("${HULL_SHADERS}" "Hull" "6.0")
+
+configure_files("${RAYTRACING_SHADERS}")
+
+# source_group("src\\Graphics\\Shaders\\DXR Shaders" FILES ${RAYTRACING_SHADERS})
+# add_custom_target("DXRShaders" SOURCES ${RAYTRACING_SHADERS})
+
 
 set(CMAKE_INSTALL_PREFIX ../bin)

@@ -40,6 +40,8 @@ public:
 
     ComPtr<ID3D12Device> GetD3D12Device();
 
+    ComPtr<ID3D12Resource> GetCurrentBackbufferResource();
+
     void CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SHADER_RESOURCE_VIEW_DESC &srvDesc,
                                   D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
     void CreateUnorderedAccessView(ID3D12Resource *resource, const D3D12_UNORDERED_ACCESS_VIEW_DESC &uavDesc,
@@ -74,6 +76,7 @@ private:
     Result<ComPtr<ID3D12Device>> CreateD3D12Device();
 
 private:
+    bool CheckFeatures(ID3D12Device* device);
     bool UpdateDescriptors();
 
 private:

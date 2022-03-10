@@ -3,8 +3,10 @@
 #include "Direct3D.h"
 #include "TextureManager.h"
 
+std::unordered_set<Model*> Model::mModels;
 std::vector<Model::Vertex> Model::mVertices;
 std::vector<uint32_t> Model::mIndices;
+UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> Model::mRaytracingInstancingBuffer;
 
 ComPtr<ID3D12Resource> Model::mVertexBuffer;
 ComPtr<ID3D12Resource> Model::mIndexBuffer;
@@ -13,6 +15,10 @@ D3D12_VERTEX_BUFFER_VIEW Model::mVertexBufferView;
 D3D12_INDEX_BUFFER_VIEW Model::mIndexBufferView;
 
 std::unordered_map<std::string, Model::RenderParameters> Model::mModelsRenderParameters;
+std::vector<Model::AccelerationStructureBuffers> Model::mBottomLevelAccelerationStructures;
+
+Model::AccelerationStructureBuffers Model::mTopLevelBuffers;
+uint32_t Model::mSizeTLAS = 0;
 
 using namespace DirectX;
 
@@ -252,8 +258,68 @@ Result<std::tuple<std::string, MaterialConstants>> Model::ProcessMaterialFromMes
 	return result;
 }
 
+bool Model::BuildBottomLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList)
+{
+	D3D12_GPU_VIRTUAL_ADDRESS vbStartAddress = mVertexBuffer->GetGPUVirtualAddress() + sizeof(decltype(mVertices[0])) * mInfo.BaseVertexLocation;
+	D3D12_GPU_VIRTUAL_ADDRESS ibStartAddress = mIndexBuffer->GetGPUVirtualAddress() + sizeof(decltype(mIndices[0])) * mInfo.StartIndexLocation;
+
+	SHOWINFO("Vertex count = {}", mInfo.VertexCount);
+	SHOWINFO("Index count = {}", mInfo.IndexCount);
+	SHOWINFO("ibStartAddress = {}", ibStartAddress);
+	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
+	geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+	geomDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+	geomDesc.Triangles.VertexCount = mInfo.VertexCount;
+	geomDesc.Triangles.VertexBuffer.StartAddress = vbStartAddress;
+	geomDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+	geomDesc.Triangles.IndexBuffer = ibStartAddress;
+	geomDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+	geomDesc.Triangles.IndexCount = mInfo.IndexCount;
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+	inputs.NumDescs = 1;
+	inputs.pGeometryDescs = &geomDesc;
+	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+
+	ComPtr<ID3D12Device5> device5;
+	CHECK_HR(mDevice.As(&device5), false);
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+	device5->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+	SHOWINFO("D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO = ({}, {})", info.ResultDataMaxSizeInBytes, info.ScratchDataSizeInBytes);
+
+	ComPtr<ID3D12Resource> intermediaryResource;
+	std::tie(mBLASBuffers.scratchBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr, (uint32_t)info.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	mBLASBuffers.scratchBuffer->SetName(L"Model scratch buffer");
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+	
+	std::tie(mBLASBuffers.resultBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList,
+		D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr, (uint32_t)info.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+	mBLASBuffers.resultBuffer->SetName(L"Model result buffer");
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.ScratchAccelerationStructureData = mBLASBuffers.scratchBuffer->GetGPUVirtualAddress();
+	asDesc.DestAccelerationStructureData = mBLASBuffers.resultBuffer->GetGPUVirtualAddress();
+
+	cmdList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	barrier.UAV.pResource = mBLASBuffers.resultBuffer.Get();
+	cmdList->ResourceBarrier(1, &barrier);
+
+	mBottomLevelAccelerationStructures.push_back(mBLASBuffers);
+
+	return true;
+}
+
 Model::Model(unsigned int maxDirtyFrames, unsigned int constantBufferIndex) : 
-	UpdateObject(maxDirtyFrames, constantBufferIndex)
+	UpdateObject(maxDirtyFrames, constantBufferIndex), D3DObject()
 {
 }
 
@@ -261,6 +327,8 @@ bool Model::Create(ModelType type)
 {
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, ModelType) instead of this");
+	D3DObject::Init();
+	mModels.insert(this);
 	switch (type)
 	{
 		case Model::ModelType::Triangle:
@@ -274,7 +342,8 @@ bool Model::Create(ModelType type)
 			SHOWFATAL("Model type {} is not a valid model for Create(ModelType) function. Try using another specialized function", (int)type);
 			return false;
 	}
-	AddInstance(InstanceInfo());
+
+	CHECK(AddInstance(InstanceInfo()).Valid(), false, "Unable to add a basic instance");
 
     return true;
 }
@@ -283,6 +352,9 @@ bool Model::Create(const std::string &path)
 {
 	CHECK(UpdateObject::Valid(), false, "Cannot create a model that was not properly initialized. "\
 		  "Try calling Create(unsigned int, unsigned int, std::string) instead of this");
+	D3DObject::Init();
+	mModels.insert(this);
+
 	Assimp::Importer importer;
 
 	const aiScene *pScene = importer.ReadFile(path, aiProcess_Triangulate |
@@ -291,7 +363,7 @@ bool Model::Create(const std::string &path)
 
 	CHECK(ProcessNode(pScene->mRootNode, pScene, path), false,
 		  "Unable to process model located at path {}", path);
-	AddInstance(InstanceInfo());
+	CHECK(AddInstance(InstanceInfo()).Valid(), false, "Unable to add a basic instance");
 
 	return true;
 }
@@ -299,6 +371,8 @@ bool Model::Create(const std::string &path)
 bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type)
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
+	D3DObject::Init();
+	mModels.insert(this);
 	return Create(type);
 }
 
@@ -306,6 +380,7 @@ bool Model::Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex
 {
 	UpdateObject::Init(maxDirtyFrames, constantBufferIndex);
 	D3DObject::Init();
+	mModels.insert(this);
 	return Create(path);
 }
 
@@ -457,6 +532,82 @@ bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resourc
 	return true;
 }
 
+bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList)
+{
+	uint32_t countInstances = 0;
+	struct InstanceInfo
+	{
+		ComPtr<ID3D12Resource> bottomLevelStructure;
+		DirectX::XMMATRIX world;
+	};
+	// std::unordered_map<uint32_t, InstanceInfo> instancesInfo;
+	std::vector<InstanceInfo> instancesInfo;
+	for (const auto& model : mModels)
+	{
+		// countInstances += model->mInstancesInfo.size();
+		for (uint32_t i = 0; i < model->mInstancesInfo.size(); ++i)
+		{
+			auto& currentInstance = instancesInfo.emplace_back();
+			currentInstance.bottomLevelStructure = model->mBLASBuffers.resultBuffer;
+			currentInstance.world = model->mInstancesInfo[i].instanceInfo.WorldMatrix;
+		}
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	inputs.NumDescs = (uint32_t)instancesInfo.size();
+
+	auto device = Direct3D::Get()->GetD3D12Device();
+	ComPtr<ID3D12Device5> device5;
+	CHECK_HR(device.As(&device5), false);
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+	device5->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+	ComPtr<ID3D12Resource> intermediaryResource;
+	std::tie(mTopLevelBuffers.scratchBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr, (uint32_t)info.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+
+	std::tie(mTopLevelBuffers.resultBuffer, intermediaryResource) = Utils::CreateDefaultBuffer(device5.Get(), cmdList, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+		nullptr, (uint32_t)info.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CHECK(!intermediaryResource, false, "Got a valid intermediary pointer when expected an invalid one");
+	mSizeTLAS = (uint32_t)info.ResultDataMaxSizeInBytes;
+
+	CHECK(mRaytracingInstancingBuffer.Init((uint32_t)instancesInfo.size()), false, "Cannot create instance buffer for TLAS");
+
+	for (uint32_t i = 0; i < (uint32_t)instancesInfo.size(); ++i)
+	{
+		D3D12_RAYTRACING_INSTANCE_DESC* instanceDesc = mRaytracingInstancingBuffer.GetMappedMemory(i);
+
+		instanceDesc->AccelerationStructure = instancesInfo[i].bottomLevelStructure->GetGPUVirtualAddress();
+		instanceDesc->InstanceID = i;
+		instanceDesc->InstanceMask = 0xff;
+		instanceDesc->Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+		instanceDesc->InstanceContributionToHitGroupIndex = i;
+		DirectX::XMFLOAT3X4 matrix = {};
+		DirectX::XMMATRIX worldMatrix = instancesInfo[i].world;
+		DirectX::XMStoreFloat3x4(&matrix, worldMatrix);
+		memcpy(instanceDesc->Transform, &matrix, sizeof(instanceDesc->Transform));
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.Inputs.InstanceDescs = mRaytracingInstancingBuffer.GetGPUVirtualAddress();
+	asDesc.DestAccelerationStructureData = mTopLevelBuffers.resultBuffer->GetGPUVirtualAddress();
+	asDesc.ScratchAccelerationStructureData = mTopLevelBuffers.scratchBuffer->GetGPUVirtualAddress();
+
+	cmdList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	barrier.UAV.pResource = mTopLevelBuffers.resultBuffer.Get();
+	cmdList->ResourceBarrier(1, &barrier);
+
+	return true;
+}
+
 void Model::Bind(ID3D12GraphicsCommandList *cmdList)
 {
 	cmdList->IASetVertexBuffers(0, 1, &mVertexBufferView);
@@ -467,6 +618,26 @@ void Model::Destroy()
 {
 	mVertexBuffer.Reset();
 	mIndexBuffer.Reset();
+
+	mTopLevelBuffers.resultBuffer.Reset();
+	mTopLevelBuffers.scratchBuffer.Reset();
+
+	mBottomLevelAccelerationStructures.clear();
+}
+
+uint32_t Model::GetTotalInstanceCount()
+{
+	uint32_t countInstances = 0;
+	for (const auto& model : mModels)
+	{
+		 countInstances += model->mInstancesInfo.size();
+	}
+	return countInstances;
+}
+
+ComPtr<ID3D12Resource> Model::GetTLASBuffer()
+{
+	return mTopLevelBuffers.resultBuffer;
 }
 
 void Model::ResetCurrentInstances()

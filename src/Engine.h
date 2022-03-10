@@ -30,6 +30,7 @@ protected:
     virtual bool OnRender(ID3D12GraphicsCommandList *cmdList, FrameResources* frameResources) = 0;
     virtual bool OnRenderGUI() = 0;
     virtual bool OnResize() = 0;
+    virtual void OnClose() = 0;
     virtual std::unordered_map<uuids::uuid, uint32_t> GetInstanceCount();
 
     virtual ID3D12PipelineState *GetBeginFramePipeline() = 0;
@@ -43,7 +44,7 @@ protected:
 
     ComPtr<ID3D12Fence> mFence;
     uint64_t mCurrentFrame = 0;
-    unsigned int mClientWidth = 800, mClientHeight = 600;
+    unsigned int mClientWidth = 1920, mClientHeight = 1080;
 
 private:
     bool InitWindow();

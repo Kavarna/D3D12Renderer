@@ -190,6 +190,12 @@ ComPtr<ID3D12Device> Direct3D::GetD3D12Device()
     return mDevice;
 }
 
+ComPtr<ID3D12Resource> Direct3D::GetCurrentBackbufferResource()
+{
+    uint32_t activeBackBuffer = mSwapchain->GetCurrentBackBufferIndex();
+    return mSwapchainResources[activeBackBuffer];
+}
+
 void Direct3D::CreateShaderResourceView(ID3D12Resource *resource, const D3D12_SHADER_RESOURCE_VIEW_DESC &srvDesc,
                                         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {
@@ -390,6 +396,7 @@ Result<ComPtr<ID3D12Device>> Direct3D::CreateD3D12Device()
 {
     ComPtr<ID3D12Device> device;
     CHECK_HR(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device)), std::nullopt);
+    // CHECK(CheckFeatures(device.Get()), std::nullopt, "The found adapter is not good enough");
     SHOWINFO("Successfully created a ID3D12Device");
     return device;
 }
@@ -403,6 +410,16 @@ constexpr unsigned int Direct3D::GetDescriptorIncrementSize()
         incrementSize = mDevice->GetDescriptorHandleIncrementSize(heapType);
     }
     return *incrementSize;
+}
+
+bool Direct3D::CheckFeatures(ID3D12Device* device)
+{
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 raytracingSupport;
+    CHECK_HR(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &raytracingSupport, sizeof(raytracingSupport)), false);
+
+    CHECK(raytracingSupport.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED, false, "Raytracing not working on this computer");
+
+    return true;
 }
 
 bool Direct3D::UpdateDescriptors()

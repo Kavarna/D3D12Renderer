@@ -2,6 +2,8 @@
 #include "Direct3D.h"
 #include "Conversions.h"
 #include "Utils/BatchRenderer.h"
+#include "Utils/RayTracingStructures.h"
+#include "Utils/Utils.h"
 
 std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> GetSamplers()
 {
@@ -38,6 +40,7 @@ std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> GetSamplers()
 
 bool PipelineManager::Init()
 {
+    CHECK(D3DObject::Init(), false, "Unable to initialize d3d object");
     mSamplers = GetSamplers();
 
     CHECK(InitRootSignatures(), false, "Unable to initialize all root signatures");
@@ -84,6 +87,19 @@ auto PipelineManager::GetRootSignature(PipelineType pipelineType) -> Result<ID3D
     else
     {
         SHOWFATAL("Cannot find root signature type for pipeline type {}", PipelineTypeString[(int)pipelineType]);
+        return std::nullopt;
+    }
+}
+
+auto PipelineManager::GetRootSignature(RootSignatureType rootSignatureType) -> Result<ID3D12RootSignature*>
+{
+    if (auto it = mRootSignatures.find(rootSignatureType); it != mRootSignatures.end())
+    {
+        return it->second.Get();
+    }
+    else
+    {
+        SHOWFATAL("Cannot find root signature type for type {}", RootSignatureTypeString[(int)rootSignatureType]);
         return std::nullopt;
     }
 }
@@ -137,11 +153,13 @@ bool PipelineManager::InitEmptyRootSignature()
     D3D12_ROOT_SIGNATURE_DESC signatureDesc = {};
     signatureDesc.NumParameters = 0;
     signatureDesc.NumStaticSamplers = 0;
-    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    signatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid empty root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatures[type]->SetName(L"Empty root signature");
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized empty root signature");
     return true;
@@ -165,6 +183,7 @@ bool PipelineManager::InitSimpleColorRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized simple color root signature");
     return true;
@@ -195,6 +214,7 @@ bool PipelineManager::InitObjectFrameMaterialRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid object frame material root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized object frame material root signature");
     return true;
@@ -220,6 +240,7 @@ bool PipelineManager::InitTextureOnlyRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized texture only root signature");
     return true;
@@ -248,6 +269,7 @@ bool PipelineManager::InitTextureSrvUavBufferRootSignature()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid simple color root signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized texture srv uav and buffer signature");
     return true;
@@ -279,6 +301,7 @@ bool PipelineManager::InitPassMaterialLightsTextureInstance()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid PassMaterialLightsTextureInstance signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized PassMaterialLightsTextureInstance");
     return true;
@@ -302,6 +325,7 @@ bool PipelineManager::InitOneCBV()
     auto signature = d3d->CreateRootSignature(signatureDesc);
     CHECK(signature.Valid(), false, "Unable to create a valid OneCBV signature");
     mRootSignatures[type] = signature.Get();
+    mRootSignatureDescs[type] = signatureDesc;
 
     SHOWINFO("Successfully initialized OneCBV");
     return true;

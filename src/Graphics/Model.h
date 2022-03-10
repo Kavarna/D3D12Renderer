@@ -6,6 +6,7 @@
 #include "Vertex.h"
 #include "Utils/UpdateObject.h"
 #include "MaterialManager.h"
+#include "Utils/UploadBuffer.h"
 
 #include <assimp\Importer.hpp>
 #include <assimp\scene.h>
@@ -47,6 +48,8 @@ public:
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, ModelType type);
     bool Create(unsigned int maxDirtyFrames, unsigned int constantBufferIndex, const std::string& path);
 
+    bool BuildBottomLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList);
+
     Result<uint32_t> AddInstance(const InstanceInfo& info,
         void* Context = nullptr);
     void ClearInstances();
@@ -67,9 +70,13 @@ public:
 
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList* cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
+    static bool BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList);
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
 
+    static uint32_t GetTotalInstanceCount();
+
+    static ComPtr<ID3D12Resource> GetTLASBuffer();
 public:
     void ResetCurrentInstances();
     void AddCurrentInstance(uint32_t index);
@@ -100,6 +107,8 @@ private:
     Result<std::tuple<std::string, MaterialConstants>> ProcessMaterialFromMesh(const aiMesh* mesh, const aiScene* scene);
 
 private:
+    static std::unordered_set<Model*> mModels;
+
     static std::vector<Vertex> mVertices;
     static std::vector<uint32_t> mIndices;
 
@@ -117,9 +126,18 @@ private:
         uint32_t StartIndexLocation;
         MaterialManager::Material const* Material = nullptr;
     };
-
     static std::unordered_map<std::string, RenderParameters> mModelsRenderParameters;
 
+    struct AccelerationStructureBuffers
+    {
+        ComPtr<ID3D12Resource> scratchBuffer;
+        ComPtr<ID3D12Resource> resultBuffer;
+    };
+    static std::vector<AccelerationStructureBuffers> mBottomLevelAccelerationStructures;
+
+    static AccelerationStructureBuffers mTopLevelBuffers;
+    static UploadBuffer<D3D12_RAYTRACING_INSTANCE_DESC> mRaytracingInstancingBuffer;
+    static uint32_t mSizeTLAS;
 
 private:
     bool CreateTriangle();
@@ -145,6 +163,8 @@ private:
 
     DirectX::BoundingBox mBoundingBox;
     DirectX::BoundingSphere mBoundingSphere;
+
+    AccelerationStructureBuffers mBLASBuffers;
 
     RenderParameters mInfo;
 };
