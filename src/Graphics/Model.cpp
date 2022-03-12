@@ -535,6 +535,7 @@ bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdLi
 	{
 		ComPtr<ID3D12Resource> bottomLevelStructure;
 		DirectX::XMMATRIX world;
+		uint32_t flags;
 	};
 	// std::unordered_map<uint32_t, InstanceInfo> instancesInfo;
 	std::vector<InstanceInfo> instancesInfo;
@@ -546,6 +547,7 @@ bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdLi
 			auto& currentInstance = instancesInfo.emplace_back();
 			currentInstance.bottomLevelStructure = model.mBLASBuffers.resultBuffer;
 			currentInstance.world = model.mInstancesInfo[i].instanceInfo.WorldMatrix;
+			currentInstance.flags = model.mInstancesInfo[i].instanceInfo.flags;
 		}
 	}
 
@@ -581,7 +583,7 @@ bool Model::BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdLi
 		instanceDesc->InstanceID = i;
 		instanceDesc->InstanceMask = 0xff;
 		instanceDesc->Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-		instanceDesc->InstanceContributionToHitGroupIndex = i;
+		instanceDesc->InstanceContributionToHitGroupIndex = 2 * i;
 		DirectX::XMFLOAT3X4 matrix = {};
 		DirectX::XMMATRIX worldMatrix = instancesInfo[i].world;
 		DirectX::XMStoreFloat3x4(&matrix, worldMatrix);

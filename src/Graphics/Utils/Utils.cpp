@@ -65,6 +65,13 @@ ComPtr<ID3DBlob> Utils::CompileLibrary(const wchar_t* filename, const wchar_t* t
     CHECK_HR(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)), nullptr);
     CHECK_HR(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)), nullptr);
 
+    // Get compilation arguments
+    // TODO: Make this dynamic
+    std::vector<LPCWSTR> arguments;
+    arguments.push_back(L"-Zi"); // DEBUG
+    arguments.push_back(L"-Od"); // Skip optimizations
+
+
     // Read the shader
     std::ifstream shaderFile(filename);
     CHECK(shaderFile.good(), nullptr, "Unable to open file");
@@ -78,7 +85,7 @@ ComPtr<ID3DBlob> Utils::CompileLibrary(const wchar_t* filename, const wchar_t* t
     CHECK_HR(library->CreateBlobWithEncodingFromPinned((void*)shaderContent.data(), (uint32_t)shaderContent.size(), 0, &textBlob), nullptr);
 
     ComPtr<IDxcOperationResult> result;
-    CHECK_HR(compiler->Compile(textBlob.Get(), filename, L"", target, nullptr, 0, nullptr, 0, nullptr, &result), nullptr);
+    CHECK_HR(compiler->Compile(textBlob.Get(), filename, L"", target, arguments.data(), (uint32_t)arguments.size(), nullptr, 0, nullptr, &result), nullptr);
 
     HRESULT errorCode;
     CHECK_HR(result->GetStatus(&errorCode), nullptr);
