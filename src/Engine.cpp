@@ -199,6 +199,7 @@ bool Engine::OnRender()
     d3d->Present();
     d3d->Signal(mFence.Get(), mCurrentFrame);
   
+    d3d->WaitForFenceValue(mFence.Get(), mCurrentFrame);
     mCurrentFrameResource->FenceValue = ++mCurrentFrame;
 
     return true;

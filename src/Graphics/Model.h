@@ -69,7 +69,7 @@ public:
 
 public:
     static bool InitBuffers(ID3D12GraphicsCommandList* cmdList, ComPtr<ID3D12Resource> intermediaryResources[2]);
-    static bool BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList, const std::vector<Model>& models);
+    static bool BuildTopLevelAccelerationStructure(ID3D12GraphicsCommandList4* cmdList, const std::vector<Model>& models, uint32_t maxHitShaders, bool update = false);
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
 
