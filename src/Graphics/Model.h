@@ -15,8 +15,8 @@
 
 class Model : public UpdateObject, public D3DObject
 {
-    using Vertex = PositionNormalTexCoordVertex;
 public:
+    using Vertex = PositionNormalTexCoordVertex;
     enum class ModelType
     {
         Triangle = 0, Square, Grid
@@ -73,7 +73,13 @@ public:
     static void Bind(ID3D12GraphicsCommandList* cmdList);
     static void Destroy();
 
+    static std::vector<Vertex>const& GetAllVertices();
+    static std::vector<uint32_t>const& GetAllIndices();
+    static ComPtr<ID3D12Resource>const& GetCompleteVertexBuffer();
+    static ComPtr<ID3D12Resource>const& GetCompleteIndexBuffer();
+
     static uint32_t GetTotalInstanceCount(const std::vector<Model>& models);
+    static const InstanceInfo& GetInstanceAtIndex(const std::vector<Model>& models, uint32_t index);
 
     static ComPtr<ID3D12Resource> GetTLASBuffer();
 public:

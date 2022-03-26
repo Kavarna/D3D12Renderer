@@ -510,12 +510,14 @@ bool Model::InitBuffers(ID3D12GraphicsCommandList *cmdList, ComPtr<ID3D12Resourc
 								   mVertices.data(), (uint32_t)sizeof(Vertex) * (uint32_t)mVertices.size());
 	CHECK((mVertexBuffer != nullptr) && (intermediaryResources[0] != nullptr), false,
 		  "Unable to create Vertex Buffer with {} vertices", mVertices.size());
+	mVertexBuffer->SetName(L"Vertex buffer");
 
 	std::tie(mIndexBuffer, intermediaryResources[1]) =
 		Utils::CreateDefaultBuffer(device.Get(), cmdList, D3D12_RESOURCE_STATE_GENERIC_READ,
 								   mIndices.data(), (uint32_t)sizeof(uint32_t) * (uint32_t)mIndices.size());
 	CHECK((mIndexBuffer != nullptr) && (intermediaryResources[1] != nullptr), false,
 		  "Unable to create Index Buffer with {} vertices", mIndices.size());
+	mIndexBuffer->SetName(L"Index buffer");
 
 	mVertexBufferView.BufferLocation = mVertexBuffer->GetGPUVirtualAddress();
 	mVertexBufferView.SizeInBytes = (uint32_t)sizeof(Vertex) * (uint32_t)mVertices.size();
@@ -639,6 +641,26 @@ void Model::Destroy()
 	mBottomLevelAccelerationStructures.clear();
 }
 
+std::vector<Model::Vertex>const& Model::GetAllVertices()
+{
+	return mVertices;
+}
+
+std::vector<uint32_t>const& Model::GetAllIndices()
+{
+	return mIndices;
+}
+
+ComPtr<ID3D12Resource>const& Model::GetCompleteVertexBuffer()
+{
+	return mVertexBuffer;
+}
+
+ComPtr<ID3D12Resource>const& Model::GetCompleteIndexBuffer()
+{
+	return mIndexBuffer;
+}
+
 uint32_t Model::GetTotalInstanceCount(const std::vector<Model>& models)
 {
 	uint32_t countInstances = 0;
@@ -647,6 +669,20 @@ uint32_t Model::GetTotalInstanceCount(const std::vector<Model>& models)
 		 countInstances += (uint32_t)model.mInstancesInfo.size();
 	}
 	return countInstances;
+}
+
+const InstanceInfo& Model::GetInstanceAtIndex(const std::vector<Model>& models, uint32_t index)
+{
+	uint32_t countInstances = 0;
+	for (const auto& model : models)
+	{
+		for (uint32_t i = 0; i < model.mInstancesInfo.size(); ++i)
+		{
+			if (countInstances == index)
+				return model.mInstancesInfo[i].instanceInfo;
+			countInstances++;
+		}
+	}
 }
 
 ComPtr<ID3D12Resource> Model::GetTLASBuffer()
@@ -821,7 +857,7 @@ bool Model::CreatePrimitive(const InitializationInfo & initInfo)
 	}
 	else
 	{
-		static_assert(false, "Invalid type for creating a model");
+		return false;
 	}
 	return true;
 }
